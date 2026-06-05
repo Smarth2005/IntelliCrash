@@ -1,0 +1,150 @@
+# IntelliCrash Configuration
+# All hyperparameters and paths in one place
+
+paths:
+  data_dir: "Datasets for IntelliCrash"
+  df_csv: "Datasets for IntelliCrash/df.csv"
+  crash_train_csv: "Datasets for IntelliCrash/car_crash_train.csv"
+  sensor_raw_csv: "Datasets for IntelliCrash/sensor_raw.csv"
+  features_14_csv: "Datasets for IntelliCrash/cap1/features_14.csv"
+  india_accidents_csv: "Datasets for IntelliCrash/accident_prediction_india.csv"
+  processed_dir: "data/processed"
+  windows_dir: "data/processed/windows"
+  plots_dir: "outputs/plots"
+  reports_dir: "outputs/reports"
+  model_checkpoints: "models/checkpoints"
+  model_onnx: "models/onnx"
+
+# IMU Data Parameters (df.csv)
+imu:
+  sampling_rate_hz: 100           # 100 Hz data
+  window_size_sec: 2.0            # 2-second sliding windows
+  window_size_samples: 200        # 2s * 100Hz
+  window_stride_sec: 0.5          # 50% overlap stride
+  window_stride_samples: 50       # 0.5s * 100Hz
+
+# Labels — map the 74 event labels to binary crash/no-crash
+labels:
+  crash_events:
+    # Patterns that indicate crash/aggressive events
+    - "crash"
+    - "aggressive"
+    - "collision"
+  normal_events:
+    - "normal"
+  # Everything else (Sshape, f-lane, brakes, etc.) = driving maneuvers = non-crash
+  treat_maneuvers_as: "non_crash"
+
+# Feature Engineering
+features:
+  raw_channels:
+    - "accele_x"
+    - "accele_y"
+    - "gyro_z"
+  engineered:
+    - "peak_accel"
+    - "delta_v"
+    - "jerk_rms"
+    - "resultant_mag"
+    - "accel_magnitude"
+    - "fft_energy_ax"
+    - "fft_energy_ay"
+    - "fft_energy_gz"
+    - "spectral_centroid_ax"
+    - "spectral_centroid_ay"
+    - "rms_accel"
+    - "zero_crossing_rate_ax"
+    - "zero_crossing_rate_ay"
+    - "cross_corr_xy"
+    - "variance_accel_x"
+    - "variance_accel_y"
+    - "variance_gyro_z"
+    - "max_jerk"
+
+# Bi-LSTM Model
+lstm:
+  input_features: 24              # 6 raw + 18 engineered per timestep
+  hidden_size: 128
+  num_layers: 2
+  bidirectional: true
+  dropout: 0.3
+  output_crash: 1                 # Binary crash probability
+  output_severity: 1              # Severity regression (0-1 scale)
+
+# Training
+training:
+  batch_size: 64
+  epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.01
+  lr_scheduler: "cosine_annealing"
+  focal_loss_gamma: 2.0
+  focal_loss_alpha: 0.75
+  severity_loss_weight: 0.3
+  crash_loss_weight: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  random_seed: 42
+
+# Physics-based Crash Severity Index (CSI) — real car thresholds
+csi:
+  real_car:
+    g_normalizer: 60.0            # 60g max for real cars
+    delta_v_normalizer: 50.0      # 50 km/h max delta-V
+    weights:
+      peak_g: 0.35
+      delta_v: 0.30
+      jerk: 0.20
+      duration: 0.15
+    crash_threshold: 0.40
+  rc_buggy:
+    g_normalizer: 8.0             # 8g max for buggy
+    delta_v_normalizer: 5.0       # 5 km/h max for buggy
+    weights:
+      peak_g: 0.35
+      delta_v: 0.30
+      jerk: 0.20
+      duration: 0.15
+    crash_threshold: 0.35
+
+# Fusion Gate (LSTM score + CSI score)
+fusion:
+  lstm_weight: 0.6
+  csi_weight: 0.4
+  final_threshold: 0.50
+
+# XGBoost Severity Model
+xgboost:
+  n_estimators: 300
+  max_depth: 6
+  learning_rate: 0.1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  objective: "multi:softprob"
+  num_class: 3                    # Minor, Severe, Fatal
+  eval_metric: "mlogloss"
+  random_seed: 42
+
+# Twilio AI Voice Agent / SMS Alerts
+twilio:
+  account_sid: "YOUR_TWILIO_ACCOUNT_SID"
+  auth_token: "YOUR_TWILIO_AUTH_TOKEN"
+  from_number: "+1234567890"          # Your Twilio verified number
+  emergency_contact: "+919876543210"  # Emergency contact number
+
+# Hospital Dispatch (Email)
+email:
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  sender_email: "your_alert_email@gmail.com"
+  sender_password: "YOUR_APP_PASSWORD"
+  hospital_email: "hospital_dispatch@example.com"
+
+# Autoencoder Baseline
+autoencoder:
+  encoder_hidden: 128
+  latent_dim: 32
+  decoder_hidden: 128
+  anomaly_threshold_sigma: 3.0   # mu + 3*sigma
+  epochs: 30
+  learning_rate: 0.001
