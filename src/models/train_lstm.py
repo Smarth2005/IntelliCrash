@@ -61,6 +61,10 @@ def prepare_data(val_split=0.15, test_split=0.15, seed=42):
     
     print(f"Splits - Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
     
+    # Save test sets for evaluation script
+    np.save(data_dir / "imu_augmented_X_test.npy", X_test)
+    np.save(data_dir / "imu_augmented_y_test.npy", y_test)
+    
     return {
         "train": IMUDataset(X_train, y_train, sev_train),
         "val": IMUDataset(X_val, y_val, sev_val),

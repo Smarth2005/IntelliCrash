@@ -24,7 +24,7 @@ def run_ablation_study():
     print("Loading test data...")
     # In Colab, you would load the actual X_test and y_test saved during preprocessing.
     # We will assume they are saved in processed_dir/
-    data_dir = Path("data/processed")
+    data_dir = Path("data/processed/windows")
     
     try:
         X_test = np.load(data_dir / "imu_augmented_X_test.npy")
@@ -50,11 +50,15 @@ def run_ablation_study():
 
     print("Running Inference on Test Set...\n")
     
-    # 1. Get LSTM Predictions
-    X_tensor = torch.FloatTensor(X_test).to(device)
+    # 1. Get LSTM Predictions (batched to avoid GPU OOM)
+    batch_size = 256
+    lstm_probs = []
     with torch.no_grad():
-        lstm_probs, _ = model(X_tensor)
-        lstm_probs = lstm_probs.cpu().numpy().flatten()
+        for i in range(0, len(X_test), batch_size):
+            batch = torch.FloatTensor(X_test[i:i+batch_size]).to(device)
+            probs, _ = model(batch)
+            lstm_probs.append(probs.cpu().numpy().flatten())
+    lstm_probs = np.concatenate(lstm_probs)
     
     # 2. Get Physics CSI Predictions
     csi_scores = compute_csi(features_test, mode="real_car")

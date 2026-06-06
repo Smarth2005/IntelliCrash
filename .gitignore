@@ -1,31 +1,12 @@
-# Python
+# Raw datasets (too large for GitHub, 210MB+)
+dataset/
+
+# Python/IDE
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.env
-venv/
-env/
-
-# Data and Models (Too large for GitHub, should be ignored)
-# If you want to push small processed CSVs, you can remove the ones below,
-# but DO NOT push the huge raw dataset or large .npy/.pt files.
-*.npy
-*.pt
-*.pth
-*.onnx
-data/processed/
-Datasets for IntelliCrash/
-data/raw/
-
-# IDEs
+*.pyc
+.ipynb_checkpoints/
 .vscode/
-.idea/
-.DS_Store
+.gemini/
 
-# Next.js Dashboard
-dashboard/node_modules/
-dashboard/.next/
-dashboard/out/
-dashboard/build/
-dashboard/.env*.local
+# Ignore all intermediate numpy arrays (binary files, not readable on GitHub)
+*.npy

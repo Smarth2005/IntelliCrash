@@ -2,12 +2,12 @@
 # All hyperparameters and paths in one place
 
 paths:
-  data_dir: "Datasets for IntelliCrash"
-  df_csv: "Datasets for IntelliCrash/df.csv"
-  crash_train_csv: "Datasets for IntelliCrash/car_crash_train.csv"
-  sensor_raw_csv: "Datasets for IntelliCrash/sensor_raw.csv"
-  features_14_csv: "Datasets for IntelliCrash/cap1/features_14.csv"
-  india_accidents_csv: "Datasets for IntelliCrash/accident_prediction_india.csv"
+  data_dir: "dataset"
+  df_csv: "dataset/df.csv"
+  crash_train_csv: "dataset/car_crash_train.csv"
+  sensor_raw_csv: "dataset/sensor_raw.csv"
+  features_14_csv: "dataset/cap1/features_14.csv"
+  india_accidents_csv: "dataset/accident_prediction_india.csv"
   processed_dir: "data/processed"
   windows_dir: "data/processed/windows"
   plots_dir: "outputs/plots"
