@@ -2,6 +2,7 @@
 # All hyperparameters and paths in one place
 
 paths:
+  project_root: "."
   data_dir: "dataset"
   df_csv: "dataset/df.csv"
   crash_train_csv: "dataset/car_crash_train.csv"
@@ -60,10 +61,19 @@ features:
     - "variance_accel_y"
     - "variance_gyro_z"
     - "max_jerk"
+    # 8 NEW temporal/pattern features for rash driving discrimination
+    - "gyro_z_peak"
+    - "gyro_z_range"
+    - "steering_oscillation_count"
+    - "deceleration_duration"
+    - "lateral_accel_peak"
+    - "energy_ratio_ax_ay"
+    - "peak_to_peak_ay"
+    - "autocorrelation_lag1_ax"
 
 # Bi-LSTM Model
 lstm:
-  input_features: 24              # 6 raw + 18 engineered per timestep
+  input_features: 32              # 6 raw + 26 engineered per timestep
   hidden_size: 128
   num_layers: 2
   bidirectional: true
@@ -109,8 +119,8 @@ csi:
 
 # Fusion Gate (LSTM score + CSI score)
 fusion:
-  lstm_weight: 0.6
-  csi_weight: 0.4
+  lstm_weight: 0.7
+  csi_weight: 0.3
   final_threshold: 0.50
 
 # XGBoost Severity Model

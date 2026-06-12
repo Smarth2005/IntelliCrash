@@ -48,7 +48,7 @@ int main() {
         Ort::Session session(env, model_path, session_options);
 
         // Define Input/Output Nodes
-        // Based on the export configuration in train_lstm.py
+        // Based on the export configuration in train_bilstm.py
         Ort::AllocatorWithDefaultOptions allocator;
         
         const char* input_names[] = {"input"};
@@ -97,7 +97,9 @@ int main() {
             std::cout << ">> ALERT: CRASH DETECTED! Deploying emergency protocols..." << std::endl;
             
             // Calculate CSI (Simulated here for demo)
-            float csi_score = std::abs(dist(gen)) / 3.0f + 0.3f; // Generates a score mostly between 0.3 and 1.0
+            std::mt19937 local_gen(std::random_device{}());
+            std::normal_distribution<float> local_dist(0.0f, 1.0f);
+            float csi_score = std::abs(local_dist(local_gen)) / 3.0f + 0.3f; // Generates a score mostly between 0.3 and 1.0
             if (csi_score > 1.0f) csi_score = 1.0f;
             
             // Trigger Silent Alert Dispatcher via Python script

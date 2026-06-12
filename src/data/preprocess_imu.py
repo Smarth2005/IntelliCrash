@@ -85,23 +85,27 @@ def map_label_to_multiclass(label: str) -> int:
     5: Quick U-turn (uturn)
     6: Crash (any crash keyword)
     """
-    label_lower = label.strip().lower()
+    label_lower = str(label).strip().lower()
     
     # Check for crash keywords first (highest priority)
     for keyword in CRASH_KEYWORDS:
         if keyword in label_lower:
             return 6
             
-    # Rash driving patterns
-    if "brakes" in label_lower:
+    # Catch "brake", "braking", "hard braking", "brakes"
+    if "brake" in label_lower or "braking" in label_lower:
         return 3
-    elif "uturn" in label_lower:
+    # Catch "u-turn", "uturn", "quick u-turn" (must be before "turn")
+    elif "u-turn" in label_lower or "uturn" in label_lower or "u turn" in label_lower:
         return 5
+    # Catch "corner", "cornering", "turn", "turning"
     elif "corner" in label_lower or "turn" in label_lower:
         return 4
-    elif "sshape" in label_lower or "weave" in label_lower:
+    # Catch "weave", "weaving", "sshape", "s-shape", "lane weaving"
+    elif "weave" in label_lower or "weaving" in label_lower or "sshape" in label_lower or "s-shape" in label_lower:
         return 1
-    elif "lane" in label_lower or "swerve" in label_lower:
+    # Catch "swerve", "swerving", "lane swerving", "lane"
+    elif "swerve" in label_lower or "swerving" in label_lower or "lane" in label_lower:
         return 2
         
     return 0
@@ -235,14 +239,19 @@ def create_sliding_windows(
 
         X[i] = data[start:end]
 
-        # Majority vote for window label
+        # Crash ratio threshold lowered from 0.5 to 0.1 so short crashes aren't erased
         crash_ratio = labels[start:end].mean()
-        y[i] = 1 if crash_ratio > 0.5 else 0
+        y[i] = 1 if crash_ratio > 0.1 else 0
 
-        # Majority vote for rash class
+        # Prioritize rash driving over 'Normal' (0) if it takes up at least 10% of the window (0.2s)
+        # This prevents noisy labels where a 2-second window is 99% normal driving
         window_rash = rash_labels[start:end]
-        unique_rash, counts = np.unique(window_rash, return_counts=True)
-        majority_rash = unique_rash[np.argmax(counts)]
+        rash_only = window_rash[window_rash != 0]
+        if len(rash_only) >= (0.1 * window_size):
+            unique_rash, counts = np.unique(rash_only, return_counts=True)
+            majority_rash = unique_rash[np.argmax(counts)]
+        else:
+            majority_rash = 0
 
         metadata.append({
             "window_idx": i,

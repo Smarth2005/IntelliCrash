@@ -1,13 +1,18 @@
 """
 IntelliCrash — Physics-Informed Feature Engineering.
 
-Extracts 18 engineered features from raw IMU sliding windows:
+Extracts 26 engineered features from raw IMU sliding windows:
 - Peak acceleration, delta-V, jerk (RMS + max)
 - Resultant magnitude, acceleration magnitude
 - FFT spectral energy, spectral centroid
 - RMS acceleration, zero-crossing rate
 - Cross-correlation between axes
 - Variance per channel
+- Gyro-Z peak and range (rotational dynamics)
+- Steering oscillation count
+- Deceleration duration, lateral accel peak
+- Energy ratio (longitudinal vs lateral)
+- Peak-to-peak amplitude, autocorrelation
 
 These features feed both the LSTM (as additional channels) and the
 physics-based Crash Severity Index (CSI).
@@ -195,6 +200,86 @@ def cross_correlation(signal_a: np.ndarray, signal_b: np.ndarray) -> float:
     return float(np.sum(a * b) / denom)
 
 
+# ── Temporal / Pattern Features (for Rash Driving Discrimination) ────────────
+
+def gyro_z_peak(window: np.ndarray, gz_idx: int = 2) -> float:
+    """Peak absolute gyro-Z value — extreme for Quick U-turn, moderate for Hard Cornering."""
+    return float(np.max(np.abs(window[:, gz_idx])))
+
+
+def gyro_z_range(window: np.ndarray, gz_idx: int = 2) -> float:
+    """Range (max - min) of gyro-Z — captures total rotational sweep."""
+    gz = window[:, gz_idx]
+    return float(np.max(gz) - np.min(gz))
+
+
+def steering_oscillation_count(window: np.ndarray, gz_idx: int = 2) -> float:
+    """Count of direction changes in gyro-Z (sign changes).
+
+    Lane Weaving has many oscillations (high count);
+    Quick U-turn has few (1-2); Normal driving is low.
+    """
+    gz = window[:, gz_idx]
+    gz_centered = gz - np.mean(gz)
+    sign_changes = np.sum(np.diff(np.sign(gz_centered)) != 0)
+    return float(sign_changes)
+
+
+def deceleration_duration(window: np.ndarray, ax_idx: int = 0,
+                          threshold: float = -0.3) -> float:
+    """Fraction of the window with sustained negative longitudinal acceleration.
+
+    Hard Braking has long deceleration duration (>50% of window);
+    Other maneuvers have brief or no sustained deceleration.
+    """
+    ax = window[:, ax_idx]
+    decel_samples = np.sum(ax < threshold)
+    return float(decel_samples / len(ax))
+
+
+def lateral_accel_peak(window: np.ndarray, ay_idx: int = 1) -> float:
+    """Peak absolute lateral (Y-axis) acceleration.
+
+    Hard Cornering has high lateral accel; Hard Braking has low.
+    """
+    return float(np.max(np.abs(window[:, ay_idx])))
+
+
+def energy_ratio_ax_ay(window: np.ndarray, ax_idx: int = 0,
+                       ay_idx: int = 1) -> float:
+    """Ratio of energy in longitudinal vs lateral axis.
+
+    Braking is ax-dominant (ratio > 1); Cornering is ay-dominant (ratio < 1).
+    Returns log ratio to center around 0.
+    """
+    energy_ax = np.sum(window[:, ax_idx] ** 2) + 1e-8
+    energy_ay = np.sum(window[:, ay_idx] ** 2) + 1e-8
+    return float(np.log(energy_ax / energy_ay))
+
+
+def peak_to_peak_amplitude(signal_1d: np.ndarray) -> float:
+    """Peak-to-peak amplitude of a signal — captures total dynamic range."""
+    return float(np.max(signal_1d) - np.min(signal_1d))
+
+
+def autocorrelation_lag1(signal_1d: np.ndarray) -> float:
+    """Autocorrelation at lag 1 — captures periodicity/smoothness.
+
+    Weaving (periodic) has high autocorrelation;
+    Braking (abrupt) has lower autocorrelation.
+    """
+    n = len(signal_1d)
+    if n < 2:
+        return 0.0
+    mean = np.mean(signal_1d)
+    centered = signal_1d - mean
+    var = np.sum(centered ** 2)
+    if var == 0:
+        return 0.0
+    autocorr = np.sum(centered[:-1] * centered[1:]) / var
+    return float(autocorr)
+
+
 # ── Feature Extraction Pipeline ──────────────────────────────────────────────
 
 # Column indices in the raw window array (based on preprocess_imu.py output)
@@ -207,6 +292,7 @@ AY_F_IDX = 4 # accele_y_filtered
 GZ_F_IDX = 5 # gyro_z_filtered
 
 FEATURE_NAMES = [
+    # Original 18 physics features
     "peak_accel",
     "delta_v",
     "jerk_rms",
@@ -225,24 +311,37 @@ FEATURE_NAMES = [
     "variance_accel_x",
     "variance_accel_y",
     "variance_gyro_z",
+    # 8 NEW temporal/pattern features for rash driving discrimination
+    "gyro_z_peak",
+    "gyro_z_range",
+    "steering_oscillation_count",
+    "deceleration_duration",
+    "lateral_accel_peak",
+    "energy_ratio_ax_ay",
+    "peak_to_peak_ay",
+    "autocorrelation_lag1_ax",
 ]
 
-NUM_ENGINEERED_FEATURES = len(FEATURE_NAMES)
+NUM_ENGINEERED_FEATURES = len(FEATURE_NAMES)  # Now 26
 
 
 def extract_features_single(window: np.ndarray, fs: float = 100.0) -> np.ndarray:
-    """Extract 18 engineered features from a single window.
+    """Extract 26 engineered features from a single window.
+
+    18 original physics features + 8 temporal/pattern features for
+    rash driving pattern discrimination.
 
     Args:
         window: (window_size, 6) raw sensor window
         fs: Sampling frequency in Hz
 
     Returns:
-        np.ndarray of shape (18,) — one value per feature
+        np.ndarray of shape (26,) — one value per feature
     """
     dt = 1.0 / fs
 
     features = np.array([
+        # ── Original 18 physics features ──
         peak_acceleration(window, AX_IDX, AY_IDX),
         delta_v(window, AX_IDX, AY_IDX, dt),
         jerk_rms(window, AX_IDX, AY_IDX, dt),
@@ -261,6 +360,15 @@ def extract_features_single(window: np.ndarray, fs: float = 100.0) -> np.ndarray
         np.var(window[:, AX_IDX]),
         np.var(window[:, AY_IDX]),
         np.var(window[:, GZ_IDX]),
+        # ── 8 NEW temporal/pattern features ──
+        gyro_z_peak(window, GZ_IDX),
+        gyro_z_range(window, GZ_IDX),
+        steering_oscillation_count(window, GZ_IDX),
+        deceleration_duration(window, AX_IDX),
+        lateral_accel_peak(window, AY_IDX),
+        energy_ratio_ax_ay(window, AX_IDX, AY_IDX),
+        peak_to_peak_amplitude(window[:, AY_IDX]),
+        autocorrelation_lag1(window[:, AX_IDX]),
     ], dtype=np.float32)
 
     return features
@@ -274,7 +382,7 @@ def extract_features_batch(X: np.ndarray, fs: float = 100.0) -> np.ndarray:
         fs: Sampling frequency
 
     Returns:
-        np.ndarray of shape (num_windows, 18) — feature matrix
+        np.ndarray of shape (num_windows, NUM_ENGINEERED_FEATURES) — feature matrix
     """
     num_windows = X.shape[0]
     features = np.zeros((num_windows, NUM_ENGINEERED_FEATURES), dtype=np.float32)
@@ -306,7 +414,7 @@ def augment_windows_with_features(X: np.ndarray, fs: float = 100.0) -> np.ndarra
         X: (num_windows, window_size, 6) raw windows
 
     Returns:
-        features: (num_windows, 18) feature matrix
+        features: (num_windows, NUM_ENGINEERED_FEATURES) feature matrix
     """
     return extract_features_batch(X, fs)
 
@@ -320,7 +428,7 @@ def compute_csi(features: np.ndarray, mode: str = "real_car") -> np.ndarray:
         + w3 * (jerk / jerk_norm) + w4 * duration_factor
 
     Args:
-        features: (num_windows, 18) feature matrix
+        features: (num_windows, NUM_ENGINEERED_FEATURES) feature matrix
         mode: 'real_car' or 'rc_buggy' — selects normalization thresholds
 
     Returns:

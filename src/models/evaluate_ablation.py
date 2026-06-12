@@ -1,13 +1,27 @@
+"""
+IntelliCrash — Hybrid Fusion Gate Ablation Study.
+
+Compares three architecture configurations:
+1. Physics CSI Gate Only
+2. Bi-LSTM Only
+3. Fused Hybrid (Bi-LSTM + CSI) at the specified weights
+
+Output:
+- Console table
+- outputs/reports/ablation_study.csv
+"""
+
 import torch
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix, recall_score
+from sklearn.metrics import confusion_matrix
 from pathlib import Path
 import sys
+import argparse
 
-# Ensure imports work when running from command line
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from src.models.lstm import IntelliCrashLSTM
+from src.utils.config import get_config
+from src.models.bilstm import IntelliCrashBiLSTM
 from src.features.feature_engineering import compute_csi
 
 def calculate_metrics(y_true, y_pred):
@@ -20,10 +34,8 @@ def calculate_metrics(y_true, y_pred):
     
     return recall * 100, fpr * 100
 
-def run_ablation_study():
+def run_ablation_study(w_ml, w_csi):
     print("Loading test data...")
-    # In Colab, you would load the actual X_test and y_test saved during preprocessing.
-    # We will assume they are saved in processed_dir/
     data_dir = Path("data/processed/windows")
     
     try:
@@ -33,16 +45,15 @@ def run_ablation_study():
         print("Test data not found. Please ensure preprocess_imu.py has been run and test sets are saved.")
         return
 
-    # Extract the 18 engineered features (they are the last 18 columns in the 24-channel input)
-    # We just need the features from the first timestep since they are broadcasted
+    # Extract the 26 engineered features (last 26 columns in the 32-channel input)
     features_test = X_test[:, 0, 6:] 
 
     print("Loading trained Bi-LSTM model...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = IntelliCrashLSTM(input_size=24, hidden_size=128, num_layers=2).to(device)
+    model = IntelliCrashBiLSTM(input_size=32, hidden_size=128, num_layers=2).to(device)
     
     try:
-        model.load_state_dict(torch.load("models/checkpoints/best_lstm.pth", map_location=device))
+        model.load_state_dict(torch.load("models/checkpoints/best_bilstm.pth", map_location=device))
         model.eval()
     except FileNotFoundError:
         print("Model checkpoint not found. Please train the LSTM first.")
@@ -50,7 +61,7 @@ def run_ablation_study():
 
     print("Running Inference on Test Set...\n")
     
-    # 1. Get LSTM Predictions (batched to avoid GPU OOM)
+    # 1. Get LSTM Predictions (batched)
     batch_size = 256
     lstm_probs = []
     with torch.no_grad():
@@ -64,9 +75,9 @@ def run_ablation_study():
     csi_scores = compute_csi(features_test, mode="real_car")
     
     # 3. Calculate Fusion Scores
-    fusion_scores = (0.6 * lstm_probs) + (0.4 * csi_scores)
+    fusion_scores = (w_ml * lstm_probs) + (w_csi * csi_scores)
 
-    # Thresholding (0.5 threshold)
+    # Thresholding
     pred_lstm = (lstm_probs > 0.5).astype(int)
     pred_physics = (csi_scores > 0.5).astype(int)
     pred_fusion = (fusion_scores > 0.5).astype(int)
@@ -76,15 +87,52 @@ def run_ablation_study():
     recall_phys, fpr_phys = calculate_metrics(y_test, pred_physics)
     recall_fuse, fpr_fuse = calculate_metrics(y_test, pred_fusion)
 
-    # Print Results Table
-    print("-" * 65)
+    # Print Table
+    print("=========================================================================")
+    print("  Ablation Study of the Hybrid Fusion Gate")
+    print("=========================================================================")
     print(f"{'Architecture Configuration':<30} | {'Recall':<12} | {'FPR':<12}")
     print("-" * 65)
-    print(f"{'1. Physics CSI Gate Only':<30} | {recall_phys:>6.1f}% | {fpr_phys:>6.1f}%")
-    print(f"{'2. Bi-LSTM Only':<30} | {recall_lstm:>6.1f}% | {fpr_lstm:>6.1f}%")
-    print(f"{'3. Hybrid Fusion Gate':<30} | {recall_fuse:>6.1f}% | {fpr_fuse:>6.1f}%")
-    print("-" * 65)
-    print("\nCopy these results directly into your project_evaluation_report.md!")
+    print(f"{'Physics CSI Gate Only':<30} | {recall_phys:>6.2f}%       | {fpr_phys:>6.2f}%")
+    print(f"{'Bi-LSTM Only':<30} | {recall_lstm:>6.2f}%       | {fpr_lstm:>6.2f}%")
+    print(f"{'Fused (Hybrid Bi-LSTM)':<30} | {recall_fuse:>6.2f}%       | {fpr_fuse:>6.2f}%")
+    print("=========================================================================")
+
+    # Save CSV
+    cfg = get_config()
+    reports_dir = Path(cfg["paths"]["reports_dir"])
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    
+    df = pd.DataFrame([
+        {"Architecture Configuration": "Physics CSI Gate Only", "Recall (%)": round(recall_phys, 2), "FPR (%)": round(fpr_phys, 2)},
+        {"Architecture Configuration": "Bi-LSTM Only", "Recall (%)": round(recall_lstm, 2), "FPR (%)": round(fpr_lstm, 2)},
+        {"Architecture Configuration": f"Fused Hybrid ({w_ml:.1f} ML + {w_csi:.1f} CSI)", "Recall (%)": round(recall_fuse, 2), "FPR (%)": round(fpr_fuse, 2)},
+    ])
+    csv_path = reports_dir / "ablation_study.csv"
+    df.to_csv(csv_path, index=False)
+    print(f"\n=> Table saved to: {csv_path}")
 
 if __name__ == "__main__":
-    run_ablation_study()
+    parser = argparse.ArgumentParser(description="Run Architecture Ablation Study")
+    parser.add_argument("--w_ml", type=float, default=None, help="Weight for ML confidence (auto-detected from TOPSIS if not specified)")
+    parser.add_argument("--w_csi", type=float, default=None, help="Weight for CSI score (auto-detected from TOPSIS if not specified)")
+    args = parser.parse_args()
+    
+    # Auto-detect TOPSIS-optimized weights if not manually specified
+    if args.w_ml is None or args.w_csi is None:
+        import json
+        cfg = get_config()
+        weights_path = Path(cfg["paths"]["reports_dir"]) / "optimal_fusion_weights.json"
+        try:
+            with open(weights_path) as f:
+                opt = json.load(f)
+            w_ml, w_csi = opt["w_ml"], opt["w_csi"]
+            print(f"\n[Ablation] Auto-loaded TOPSIS-optimized weights: {w_ml} ML + {w_csi} CSI\n")
+        except FileNotFoundError:
+            w_ml, w_csi = 0.7, 0.3
+            print(f"\n[Ablation] WARNING: optimal_fusion_weights.json not found. Using default {w_ml}:{w_csi}\n")
+    else:
+        w_ml, w_csi = args.w_ml, args.w_csi
+        print(f"\n[Ablation] Using manually specified weights: {w_ml} ML + {w_csi} CSI\n")
+    
+    run_ablation_study(w_ml, w_csi)

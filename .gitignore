@@ -7,6 +7,27 @@ __pycache__/
 .ipynb_checkpoints/
 .vscode/
 .gemini/
+.claude/
 
 # Ignore all intermediate numpy arrays (binary files, not readable on GitHub)
 *.npy
+
+# Processed data
+data/processed/
+*.parquet
+
+# Model artifacts
+models/
+*.pth
+*.onnx
+*.pkl
+
+# Generated outputs (plots, reports, PDFs)
+outputs/
+*.pdf
+*.zip
+IntelliCrash_Dataset.csv
+
+# Dashboard build artifacts
+dashboard/node_modules/
+dashboard/.next/
