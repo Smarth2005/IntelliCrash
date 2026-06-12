@@ -14,19 +14,6 @@ __pycache__/
 
 # Processed data
 data/processed/
-*.parquet
-
-# Model artifacts
-models/
-*.pth
-*.onnx
-*.pkl
-
-# Generated outputs (plots, reports, PDFs)
-outputs/
-*.pdf
-*.zip
-IntelliCrash_Dataset.csv
 
 # Dashboard build artifacts
 dashboard/node_modules/

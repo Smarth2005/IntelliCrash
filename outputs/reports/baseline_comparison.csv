@@ -1,0 +1,7 @@
+Model,Accuracy,Precision,Recall,F1 Score,AUC-ROC
+Static Thresholds,53.16%,36.05%,72.57%,48.17%,0.500
+Random Forest (18 Features),98.96%,98.44%,98.09%,98.27%,0.999
+1D CNN,96.40%,98.11%,89.74%,93.74%,0.991
+Vanilla LSTM,96.08%,94.07%,92.78%,93.43%,0.991
+Unsupervised LSTM Autoencoder,29.99%,29.99%,100.00%,46.15%,0.685
+IntelliCrash (Bi-LSTM Gate),99.36%,98.58%,99.28%,98.93%,1.000
