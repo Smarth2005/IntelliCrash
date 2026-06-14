@@ -24,15 +24,22 @@ from src.utils.config import get_config
 from src.models.bilstm import IntelliCrashBiLSTM
 from src.features.feature_engineering import compute_csi
 
-def calculate_metrics(y_true, y_pred):
-    """Calculate Recall and False Positive Rate (FPR)"""
+def calculate_metrics(y_true, y_pred, y_probs):
+    """Calculate Accuracy, Recall, False Positive Rate (FPR), F1-Score, and AUC-ROC"""
+    from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
     cm = confusion_matrix(y_true, y_pred)
     tn, fp, fn, tp = cm.ravel()
     
+    accuracy = accuracy_score(y_true, y_pred)
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
+    f1 = f1_score(y_true, y_pred) if (tp + fp + fn) > 0 else 0
+    try:
+        auc = roc_auc_score(y_true, y_probs)
+    except Exception:
+        auc = 0.5
     
-    return recall * 100, fpr * 100
+    return accuracy * 100, recall * 100, fpr * 100, f1 * 100, auc
 
 def run_ablation_study(w_ml, w_csi):
     print("Loading test data...")
@@ -83,20 +90,20 @@ def run_ablation_study(w_ml, w_csi):
     pred_fusion = (fusion_scores > 0.5).astype(int)
 
     # Calculate Metrics
-    recall_lstm, fpr_lstm = calculate_metrics(y_test, pred_lstm)
-    recall_phys, fpr_phys = calculate_metrics(y_test, pred_physics)
-    recall_fuse, fpr_fuse = calculate_metrics(y_test, pred_fusion)
+    acc_lstm, recall_lstm, fpr_lstm, f1_lstm, auc_lstm = calculate_metrics(y_test, pred_lstm, lstm_probs)
+    acc_phys, recall_phys, fpr_phys, f1_phys, auc_phys = calculate_metrics(y_test, pred_physics, csi_scores)
+    acc_fuse, recall_fuse, fpr_fuse, f1_fuse, auc_fuse = calculate_metrics(y_test, pred_fusion, fusion_scores)
 
     # Print Table
-    print("=========================================================================")
+    print("===================================================================================================================")
     print("  Ablation Study of the Hybrid Fusion Gate")
-    print("=========================================================================")
-    print(f"{'Architecture Configuration':<30} | {'Recall':<12} | {'FPR':<12}")
-    print("-" * 65)
-    print(f"{'Physics CSI Gate Only':<30} | {recall_phys:>6.2f}%       | {fpr_phys:>6.2f}%")
-    print(f"{'Bi-LSTM Only':<30} | {recall_lstm:>6.2f}%       | {fpr_lstm:>6.2f}%")
-    print(f"{'Fused (Hybrid Bi-LSTM)':<30} | {recall_fuse:>6.2f}%       | {fpr_fuse:>6.2f}%")
-    print("=========================================================================")
+    print("===================================================================================================================")
+    print(f"{'Architecture Configuration':<30} | {'Accuracy':<10} | {'Recall':<10} | {'FPR':<10} | {'F1-Score':<10} | {'AUC-ROC':<10}")
+    print("-" * 115)
+    print(f"{'Physics CSI Gate Only':<30} | {acc_phys:>6.2f}%     | {recall_phys:>6.2f}%     | {fpr_phys:>6.2f}%     | {f1_phys:>6.2f}%     | {auc_phys:>6.4f}")
+    print(f"{'Bi-LSTM Only':<30} | {acc_lstm:>6.2f}%     | {recall_lstm:>6.2f}%     | {fpr_lstm:>6.2f}%     | {f1_lstm:>6.2f}%     | {auc_lstm:>6.4f}")
+    print(f"{'Fused (Hybrid Bi-LSTM)':<30} | {acc_fuse:>6.2f}%     | {recall_fuse:>6.2f}%     | {fpr_fuse:>6.2f}%     | {f1_fuse:>6.2f}%     | {auc_fuse:>6.4f}")
+    print("===================================================================================================================")
 
     # Save CSV
     cfg = get_config()
@@ -104,9 +111,9 @@ def run_ablation_study(w_ml, w_csi):
     reports_dir.mkdir(parents=True, exist_ok=True)
     
     df = pd.DataFrame([
-        {"Architecture Configuration": "Physics CSI Gate Only", "Recall (%)": round(recall_phys, 2), "FPR (%)": round(fpr_phys, 2)},
-        {"Architecture Configuration": "Bi-LSTM Only", "Recall (%)": round(recall_lstm, 2), "FPR (%)": round(fpr_lstm, 2)},
-        {"Architecture Configuration": f"Fused Hybrid ({w_ml:.1f} ML + {w_csi:.1f} CSI)", "Recall (%)": round(recall_fuse, 2), "FPR (%)": round(fpr_fuse, 2)},
+        {"Architecture Configuration": "Physics CSI Gate Only", "Accuracy (%)": round(acc_phys, 2), "Recall (%)": round(recall_phys, 2), "FPR (%)": round(fpr_phys, 2), "F1-Score (%)": round(f1_phys, 2), "AUC-ROC": round(auc_phys, 4)},
+        {"Architecture Configuration": "Bi-LSTM Only", "Accuracy (%)": round(acc_lstm, 2), "Recall (%)": round(recall_lstm, 2), "FPR (%)": round(fpr_lstm, 2), "F1-Score (%)": round(f1_lstm, 2), "AUC-ROC": round(auc_lstm, 4)},
+        {"Architecture Configuration": f"Fused Hybrid ({w_ml:.1f} ML + {w_csi:.1f} CSI)", "Accuracy (%)": round(acc_fuse, 2), "Recall (%)": round(recall_fuse, 2), "FPR (%)": round(fpr_fuse, 2), "F1-Score (%)": round(f1_fuse, 2), "AUC-ROC": round(auc_fuse, 4)},
     ])
     csv_path = reports_dir / "ablation_study.csv"
     df.to_csv(csv_path, index=False)

@@ -1,4 +1,4 @@
-Architecture Configuration,Recall (%),FPR (%)
-Physics CSI Gate Only,30.47,0.05
-Bi-LSTM Only,99.28,0.61
-Fused Hybrid (0.5 ML + 0.5 CSI),98.03,0.15
+Architecture Configuration,Accuracy (%),Recall (%),FPR (%),F1-Score (%),AUC-ROC
+Physics CSI Gate Only,79.11,30.47,0.05,46.67,0.7917
+Bi-LSTM Only,99.36,99.28,0.61,98.93,0.9996
+Fused Hybrid (0.5 ML + 0.5 CSI),99.3,98.03,0.15,98.83,0.9993
