@@ -12,9 +12,6 @@ __pycache__/
 # Ignore all intermediate numpy arrays (binary files, not readable on GitHub)
 *.npy
 
-# Processed data
-data/processed/
-
 # Dashboard build artifacts
 dashboard/node_modules/
 dashboard/.next/
