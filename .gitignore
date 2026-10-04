@@ -9,9 +9,11 @@ __pycache__/
 .gemini/
 .claude/
 
-# Ignore all intermediate numpy arrays (binary files, not readable on GitHub)
+# Environment / secrets
+.env
+
+# Ignore all intermediate numpy arrays
 *.npy
 
-# Dashboard build artifacts
-dashboard/node_modules/
-dashboard/.next/
+# Generated ML artifacts
+ml_pipeline/outputs/*.zip
