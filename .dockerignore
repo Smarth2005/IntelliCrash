@@ -1,0 +1,55 @@
+# Git & version control
+.git
+.gitignore
+
+# Python caches
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Large model files (mount separately or use volumes)
+outputs/models/
+models/
+*.onnx
+*.pt
+*.pth
+
+# Datasets (too large for container)
+dataset/
+data/processed/
+*.csv
+*.npy
+
+# Dashboard (separate deployment)
+dashboard/node_modules/
+dashboard/.next/
+
+# Documentation & reports
+*.pdf
+*.docx
+*.odt
+*.tex
+Research papers/
+Project_Report_MidSem/
+
+# Notebooks
+*.ipynb
+
+# Compressed archives
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
