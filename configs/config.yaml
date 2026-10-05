@@ -119,8 +119,8 @@ csi:
 
 # Fusion Gate (LSTM score + CSI score)
 fusion:
-  lstm_weight: 0.7
-  csi_weight: 0.3
+  lstm_weight: 0.5
+  csi_weight: 0.5
   final_threshold: 0.50
 
 # XGBoost Severity Model
@@ -158,3 +158,24 @@ autoencoder:
   anomaly_threshold_sigma: 3.0   # mu + 3*sigma
   epochs: 30
   learning_rate: 0.001
+
+# FastAPI Backend Configuration
+backend:
+  host: "0.0.0.0"
+  port: 8000
+  api_prefix: "/api/v1"
+  database_url: "sqlite:///./data/intellicrash.db"
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8000"
+    - "http://127.0.0.1:3000"
+    - "http://127.0.0.1:8000"
+
+# Firebase Cloud Integration
+firebase:
+  enabled: false
+  credentials_path: "credentials/firebase-service-account.json"
+  project_id: "intellicrash-cloud"
+  firestore_collection_crashes: "crash_events"
+  firestore_collection_telemetry: "telemetry_stream"
+
