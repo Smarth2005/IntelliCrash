@@ -1,0 +1,61 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────
+# IntelliCrash — Multi-Service Production Stack
+# Orchestrates:
+#   1. Mosquitto (MQTT Message Broker)
+#   2. FastAPI Enterprise Backend (REST, WebSocket, SQLite, ML)
+# ─────────────────────────────────────────────────────────────
+
+services:
+  # ── 1. MQTT Message Broker (Mosquitto) ──────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: intellicrash-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT TCP
+      - "9001:9001"   # MQTT over WebSockets
+    volumes:
+      - ./configs/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    networks:
+      - intellicrash-net
+
+  # ── 2. FastAPI Backend API & WebSocket Hub ──────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: intellicrash-backend
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=IntelliCrash API (Docker)
+      - APP_VERSION=2.0.0
+      - DEBUG=true
+      - MQTT_ENABLED=true
+      - MQTT_BROKER_HOST=mosquitto
+      - MQTT_BROKER_PORT=1883
+      - DATABASE_PATH=/app/data/intellicrash.db
+      - SECRET_KEY=intellicrash-production-secret-key-docker-compose-2026
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+    volumes:
+      - app-data:/app/data
+      - ./configs:/app/configs
+    networks:
+      - intellicrash-net
+
+networks:
+  intellicrash-net:
+    driver: bridge
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:
+  app-data:
