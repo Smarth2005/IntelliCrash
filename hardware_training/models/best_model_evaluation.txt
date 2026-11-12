@@ -1,0 +1,18 @@
+TOPSIS Rank #1 Winning Model (Selected on Validation): Tri-Modal (BiLSTM + CSI + LightGBM)
+TOPSIS Closeness Score (Ci): 0.8700
+
+Test Set Confusion Matrix:
+                    Predicted
+                    NON_CRASH  CRASH
+  Actual NON_CRASH     245       28
+  Actual CRASH          29      104
+
+Classification Report:
+              precision    recall  f1-score   support
+
+   NON_CRASH       0.89      0.90      0.90       273
+       CRASH       0.79      0.78      0.78       133
+
+    accuracy                           0.86       406
+   macro avg       0.84      0.84      0.84       406
+weighted avg       0.86      0.86      0.86       406

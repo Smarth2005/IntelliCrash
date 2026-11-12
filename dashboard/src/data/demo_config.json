@@ -1,0 +1,47 @@
+{
+  "_note": "Used while Demo mode is ON. Car and every crash are fixed at campus.lat/lon = Thapar CSED building. Hospitals are pinned so the demo works offline.",
+  "enabled": true,
+  "label": "CSED building, Thapar Institute, Patiala",
+  "campus": {
+    "lat": 30.354867754145726,
+    "lon": 76.36953790132621,
+    "zoom": 18
+  },
+  "hospitals": [
+    {
+      "id": "demo-rajindra",
+      "name": "Rajindra Hospital",
+      "address": "Government Medical College, Sangrur Road, Patiala",
+      "lat": 30.3291738,
+      "lon": 76.3838964
+    },
+    {
+      "id": "demo-mata-kaushalya",
+      "name": "Mata Kaushalya Government Hospital",
+      "address": "Patiala",
+      "lat": 30.3372237,
+      "lon": 76.399477
+    },
+    {
+      "id": "demo-adarsh",
+      "name": "Adarsh Hospital",
+      "address": "Patiala",
+      "lat": 30.346045,
+      "lon": 76.40172
+    },
+    {
+      "id": "demo-dang",
+      "name": "Dang Hospital",
+      "address": "New Lal Bagh Colony, Patiala",
+      "lat": 30.325837,
+      "lon": 76.386708
+    },
+    {
+      "id": "demo-narain",
+      "name": "Narain Hospital",
+      "address": "Patiala",
+      "lat": 30.3331079,
+      "lon": 76.4174986
+    }
+  ]
+}

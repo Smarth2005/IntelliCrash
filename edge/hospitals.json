@@ -1,0 +1,10 @@
+{
+  "_note": "Hospitals that can be asked to send an ambulance, ranked by distance from the crash. 'email' is where the request goes; leave it empty to use HOSPITAL_EMAIL from .env (demo: all requests go to your own mailbox). Replace with real emergency-desk addresses before any real deployment.",
+  "hospitals": [
+    { "name": "Rajindra Hospital", "address": "Government Medical College, Sangrur Road, Patiala", "lat": 30.3291738, "lon": 76.3838964, "email": "" },
+    { "name": "Mata Kaushalya Government Hospital", "address": "Patiala", "lat": 30.3372237, "lon": 76.399477, "email": "" },
+    { "name": "Adarsh Hospital", "address": "Patiala", "lat": 30.346045, "lon": 76.40172, "email": "" },
+    { "name": "Dang Hospital", "address": "New Lal Bagh Colony, Patiala", "lat": 30.325837, "lon": 76.386708, "email": "" },
+    { "name": "Narain Hospital", "address": "Patiala", "lat": 30.3331079, "lon": 76.4174986, "email": "" }
+  ]
+}
