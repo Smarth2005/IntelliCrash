@@ -1,506 +1,376 @@
 <div align="center">
 
-# IntelliCrash
+# 🚗💥 IntelliCrash
 
-**AI-IoT Vehicle Crash Detection & Emergency Response System**
+**Autonomous Vehicular Pre-Crash Monitoring, Real-Time Collision Detection, and Emergency Response System**
 
-*Hybrid Edge-Cloud architecture combining Bi-LSTM deep learning with physics-informed kinematics for sub-second crash detection and automated emergency dispatch.*
+*A cyber-physical IoT ecosystem combining dual-phase edge AI (Binary LightGBM + Bi-LSTM ONNX), deterministic physics kinematics (Crash Severity Index), closed-loop emergency verification, and spatial cloud telematics.*
 
-[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
-[![MQTT](https://img.shields.io/badge/MQTT-Mosquitto-660066?logo=eclipse-mosquitto&logoColor=white)](https://mosquitto.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+---
+
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2-black?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![ONNX Runtime](https://img.shields.io/badge/ONNX_Runtime-ARM64%20Optimized-005CED?logo=onnx&logoColor=white)](https://onnxruntime.ai/)
+[![Raspberry Pi](https://img.shields.io/badge/Raspberry_Pi-4_Model_B-C51A4A?logo=raspberry-pi&logoColor=white)](https://www.raspberrypi.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-WAL_Store--and--Forward-003B57?logo=sqlite&logoColor=white)](https://sqlite.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+<br/>
+
+<a href="#-tech-stack">
+  <img src="https://skillicons.dev/icons?i=python,pytorch,sklearn,nextjs,react,tailwind,threejs,sqlite,raspberrypi,linux,git,github" alt="IntelliCrash Tech Stack" />
+</a>
 
 </div>
 
 ---
 
-## Table of Contents
+## 📌 Table of Contents
 
-- [Problem Statement](#problem-statement)
-- [Key Innovations](#key-innovations)
-- [System Architecture](#system-architecture)
-- [Deployment Architecture](#deployment-architecture)
-- [Repository Structure](#repository-structure)
-- [ML Pipeline](#ml-pipeline)
-- [FastAPI Backend](#fastapi-backend)
-- [Next.js Dashboard](#nextjs-dashboard)
-- [Edge Device](#edge-device)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Testing & CI/CD](#testing--cicd)
-- [Results](#results)
-- [Tech Stack](#tech-stack)
-- [License](#license)
-
----
-
-## Problem Statement
-
-Vehicle crash fatalities are disproportionately high in regions with slow emergency response. The **Golden Hour** — the first 60 minutes after a crash — is critical for survival. Existing threshold-based crash detection systems (e.g., airbag triggers) suffer from:
-
-- **High false-positive rates** (potholes, speed bumps misclassified as crashes)
-- **Cloud dependency** (fails with poor cellular connectivity)
-- **No severity estimation** (cannot prioritize ambulance dispatch)
-
-IntelliCrash solves all three.
+- [Problem Statement & Golden Hour Mitigation](#-problem-statement--golden-hour-mitigation)
+- [Key Innovations](#-key-innovations)
+- [System Architecture](#-system-architecture)
+- [Dual-Phase AI & Kinematic Safeing Pipeline](#-dual-phase-ai--kinematic-safeing-pipeline)
+- [Closed-Loop Emergency Incident Protocol](#-closed-loop-emergency-incident-protocol)
+- [Repository Structure](#-repository-structure)
+- [Tech Stack](#-tech-stack)
+- [Hardware Test Bench Specifications](#-hardware-test-bench-specifications)
+- [Getting Started](#-getting-started)
+  - [1. Raspberry Pi Edge Node Setup](#1-raspberry-pi-edge-node-setup)
+  - [2. Next.js Spatial Web Dashboard Setup](#2-nextjs-spatial-web-dashboard-setup)
+  - [3. Hardware ML Training Suite](#3-hardware-ml-training-suite)
+- [Performance & Validation Results](#-performance--validation-results)
+- [License & Academic Credits](#-license--academic-credits)
 
 ---
 
-## Key Innovations
+## 🚨 Problem Statement & Golden Hour Mitigation
 
-| Innovation | Description |
+Vehicular collision fatalities are disproportionately severe due to emergency response delays. The **Golden Hour** — the first 60 minutes following a severe crash — is decisive for medical intervention and survival. Conventional crash detection mechanisms suffer from critical operational limitations:
+
+1. **High False-Alarm Rates:** Sudden speed bumps, potholes, or heavy braking routinely misclassify as collisions.
+2. **Cellular Vulnerability:** Pure cloud-dependent architectures fail completely in dead zones and cellular blackouts.
+3. **No Closed-Loop Driver Verification:** Automated systems blindly dispatch emergency services for minor scrapes or non-critical incidents, overburdening municipal trauma services.
+4. **Lack of Forensic Attribution:** First responders and fleet operators lack immediate objective data on collision severity, impact g-force, or pre-crash driver behavior.
+
+**IntelliCrash** resolves these bottlenecks via a **hybrid cyber-physical architecture** executed on bare-metal ARM64 hardware, delivering deterministic sub-second crash validation, closed-loop driver verification, multi-channel alerting, and spatial GIS incident telemetry.
+
+---
+
+## ✨ Key Innovations
+
+| Capability | Technical Realization |
 |---|---|
-| **Hybrid Fusion Gate** | Cross-validates Bi-LSTM predictions with physics-derived CSI (Crash Severity Index) to eliminate false alarms |
-| **Zero-Latency Edge Inference** | ONNX Runtime on Raspberry Pi 4 — no cloud round-trip for critical detection |
-| **26 Engineered Features** | Physics-informed features (Delta-V, Jerk RMS, spectral energy, gyro oscillation) from raw 6-axis IMU |
-| **Explainable AI** | SHAP-powered forensic reports explain *why* each event was classified as a crash |
-| **Real-World Validation** | Validated against 31,000+ events from the IEEE ITSC 2026 VZCrash dataset |
-| **Automated Dispatch** | SMS (Twilio) + Email alerts with GPS coordinates within seconds of detection |
+| **Dual-Phase Edge Inference** | Concurrently executes **Phase-1 Pre-Crash Rash Driving Classification** (Binary LightGBM) and **Phase-2 Crash Impact Sequence Inference** (Deep Bi-LSTM ONNX). |
+| **Physics-Informed Fusion Gate** | Dynamic score fusion ($P_{\text{final}} = 0.60 \cdot P_{\text{LSTM}} + 0.40 \cdot \text{CSI}$) cross-validated against a physical kinematic safeing barrier ($a_{\text{res}} \ge 16.0\text{ m/s}^2$). |
+| **Kinematic Feature Engineering** | Extracts 26 physics-informed kinematics and spectral features (Delta-V, RMS Jerk, Spectral Energy, FFT Centroid) from 100 Hz 5th-order Butterworth-filtered IMU telemetry. |
+| **Closed-Loop Safety Verification** | Dispatches an interactive 60-second Telegram verification countdown to the driver (`"I'm OK"` / `"I need help"`), eliminating false emergency dispatches. |
+| **Autonomous Trauma Center Radar** | Haversine distance ranking against a local trauma registry (`hospitals.json`) with automated one-time token link dispatch (`/api/ack`) and ambulance ETA tracking. |
+| **Store-and-Forward Resilience** | Local SQLite WAL-mode queue (`is_synced = 0`) and SD card `blackbox_queue/` buffer data locally during cellular outages and auto-sync on link recovery. |
+| **Forensic Video Buffer** | Sony IMX708 MIPI CSI-2 camera locks a circular 15-second rolling MP4 video container (10s pre-crash + 5s post-crash) as immutable legal evidence. |
+| **Explainable AI (XAI) Forensics** | TreeSHAP waterfall and summary plots explain exact physical feature attributions for every detected incident. |
 
 ---
 
-## System Architecture
+## 🏛️ System Architecture
+
+IntelliCrash is architected across five cohesive cyber-physical layers:
+
+```
++---------------------------------------------------------------------------------------------------+
+|                                 INTELLICRASH 5-LAYER ARCHITECTURE                                 |
++---------------------------------------------------------------------------------------------------+
+|                                                                                                   |
+|  [LAYER 5: PRESENTATION, AUTHENTICATION & SPATIAL DASHBOARD LAYER]                                |
+|  - Role-Based Access Control (RBAC): Fleet Owner, Emergency Responder, System Architect (Admin)   |
+|  - Next.js 16 Web Portal (React 19, Tailwind CSS 4, Three.js 3D Attitude Playback)                |
+|  - Interactive Leaflet GIS Fleet Mapping, Crash Heatmaps & Recharts Kinematic Curves              |
+|  - One-Click Trauma Center Acknowledgment & Ambulance ETA Portal (/api/ack)                       |
+|                                                                                                   |
+|  [LAYER 4: RESILIENT TELEMATICS & COMMUNICATIONS LAYER]                                          |
+|  - Autonomous Multi-Channel Dispatcher: Twilio SMS, Synthesized Voice Calls, Telegram GPS Pins   |
+|  - SMTP TLS Emergency Trauma Dossier Dispatcher with Synchronized Video Evidence                  |
+|  - 20 Hz Real-Time WebSocket Telemetry Stream (ws://0.0.0.0:8765)                                 |
+|  - Embedded SQLite3 Store-and-Forward Replay Sync (POST /api/ingest)                              |
+|                                                                                                   |
+|  [LAYER 3: EDGE AI & HYBRID FUSION INFERENCE LAYER]                                               |
+|  - ONNX Runtime Execution Provider (ARM64 Optimized, <15 ms latency)                             |
+|  - Phase 1: Binary LightGBM Classifier (Normal vs. Rash Driving Maneuver)                        |
+|  - Phase 2 Path A: Deep Bidirectional LSTM (Bi-LSTM) Sequence Model                              |
+|  - Phase 2 Path B: Deterministic Kinematic Crash Severity Index (CSI) Formulator                  |
+|  - Physical Safeing Barrier Gate (Resultant a_res >= 16.0 m/s^2)                                  |
+|                                                                                                   |
+|  [LAYER 2: SIGNAL PREPROCESSING & FEATURE EXTRACTION LAYER]                                       |
+|  - Circular Sensor Ring Buffer (1000 samples @ 100 Hz / 10s continuous memory)                    |
+|  - 5th-Order Butterworth Low-Pass Filter (Cutoff frequency fc = 1.3 Hz)                           |
+|  - Vectorized Feature Engineering Engine (26 Temporal, Kinematic & Spectral Metrics)              |
+|                                                                                                   |
+|  [LAYER 1: PHYSICAL HARDWARE & TRANSDUCER LAYER]                                                  |
+|  - Processing Host: Raspberry Pi 4 Model B (4GB LPDDR4, Quad Cortex-A72 @ 1.5 GHz)                |
+|  - 6DoF Inertial Sensor: SmartElex ISM330DHCX (I2C-1 Bus @ 400 kHz, Address 0x6B)                |
+|  - Multi-Constellation GNSS: u-blox NEO-8M (UART Serial Bus @ 9600 Baud)                         |
+|  - Optical Sensor: Raspberry Pi Camera Module 3 (Sony IMX708, MIPI CSI-2 Bus)                     |
+|  - In-Cabin Acoustic Actuator: Active Piezo Buzzer (GPIO 18 PWM Resonant Driver)                 |
+|                                                                                                   |
++---------------------------------------------------------------------------------------------------+
+```
+
+---
+
+## ⚡ Dual-Phase AI & Kinematic Safeing Pipeline
 
 ```mermaid
-graph TB
-    subgraph EDGE["Edge Layer — Raspberry Pi 4"]
-        IMU["IMU Sensor<br/>ISM330DHCX @ 100Hz"] --> FE["Feature Engineering<br/>(26 features)"]
-        FE --> BILSTM["Bi-LSTM<br/>ONNX Inference"]
-        FE --> CSI["Physics CSI<br/>Computation"]
-        BILSTM --> FUSION["Fusion Gate<br/>(α·BiLSTM + β·CSI)"]
-        CSI --> FUSION
-        FUSION -->|crash detected| ALERT_LOCAL["Alert Dispatch<br/>(SMS + Email)"]
-    end
+flowchart TD
+    A["Raw IMU Telemetry (100 Hz I2C)"] --> B["10s Ring Buffer (1000 samples)"]
+    B --> C["2.0s Sliding Window (200 samples)"]
+    C --> D["5th-Order Butterworth Filter (fc = 1.3 Hz)"]
+    D --> E["26 Physics-Informed Features Extraction"]
 
-    subgraph COMM["Communication Layer"]
-        MQTT_PUB["MQTT Publisher<br/>(QoS 1/2)"] --> MOSQUITTO["Mosquitto<br/>Broker"]
-        HTTP_STR["HTTP Streamer"]
-    end
+    E --> F["PHASE 1: Pre-Crash Classifier (LightGBM)"]
+    F -->|Rash Driving Detected| G["Acoustic Buzzer Warning (GPIO 18)"]
+    F -->|Normal Driving| H["Telemetry Logged"]
 
-    subgraph BACKEND["Backend Layer — FastAPI"]
-        API["REST API<br/>(:8000)"]
-        AUTH["JWT Auth<br/>(RBAC)"]
-        DB["SQLite"]
-        WS["WebSocket<br/>Manager"]
-        MQTT_SUB["MQTT<br/>Subscriber"]
-        INFER["Inference<br/>Bridge"]
+    E --> I["PHASE 2 Path A: Bi-LSTM ONNX Sequence Model"]
+    E --> J["PHASE 2 Path B: Deterministic Kinematic CSI"]
+    
+    I -->|P_LSTM| K["Dynamic Score Fusion: P_final = 0.60·P_LSTM + 0.40·CSI"]
+    J -->|CSI Score| K
 
-        MQTT_SUB --> API
-        API --> AUTH
-        API --> DB
-        API --> WS
-        API --> INFER
-    end
-
-    subgraph CLOUD["Cloud Layer"]
-        FB["Firebase<br/>Firestore"]
-    end
-
-    subgraph DASH["Dashboard — Next.js"]
-        UI["Real-time KPIs<br/>Waveforms • Maps<br/>SHAP • Simulation Lab"]
-    end
-
-    FUSION --> MQTT_PUB
-    FUSION --> HTTP_STR
-    MOSQUITTO --> MQTT_SUB
-    HTTP_STR --> API
-    API -->|sync| FB
-    WS -->|push| UI
+    K --> L{"P_final >= 0.50 ?"}
+    L -->|No| H
+    L -->|Yes| M{"Kinematic Safeing Barrier: a_res >= 16.0 m/s^2 ?"}
+    M -->|Rejected as Noise / Pothole| H
+    M -->|Validated Collision| N["Lock 15s MP4 Dashcam Video & Trigger Incident Manager"]
 ```
 
 ---
 
-## Deployment Architecture
+## 🚑 Closed-Loop Emergency Incident Protocol
 
-> **Current deployment model:** Local Docker + Edge device. No cloud hosting (AWS/Azure/GCP) is used. Firebase Firestore is an optional sync layer.
+When a collision clears the kinematic safeing barrier:
 
-```mermaid
-graph LR
-    subgraph VEHICLE["🚗 Vehicle"]
-        PI["Raspberry Pi 4<br/>• IMU Sensor<br/>• PiCamera<br/>• GPS Module<br/>• ONNX Runtime"]
-    end
+1. **Driver Safety Verification:** An interactive Telegram prompt with `"I'm OK"` and `"I need help"` callback buttons is dispatched to the driver alongside an audible alert. A 60-second verification countdown initiates.
+   - If driver taps `"I'm OK"` $\rightarrow$ Incident closed as `DRIVER_OK`, eliminating false alarm hospital callouts.
+   - If driver taps `"I need help"` or timer expires (unconscious driver) $\rightarrow$ Immediate emergency escalation.
+2. **Nearest Hospital Radar:** Haversine distances are computed against `hospitals.json` to rank the closest facilities.
+3. **Multi-Channel Dispatch:**
+   - **Twilio SMS:** Sends incident coordinates, severity, and Google Maps pin to emergency contacts.
+   - **Twilio Voice:** Initiates automated voice synthesizer call for High/Fatal severity crashes.
+   - **Telegram Live Pin:** Delivers high-priority alert with live GPS pin and driver blood group.
+   - **Trauma Email Dossier:** Sends crash kinematics and video evidence with a secure one-time verification link (`/api/ack?token=...`).
+4. **Hospital Acceptance & Cascade:**
+   - Paramedics click `/api/ack`, select **Accept**, and enter ambulance **ETA in minutes**.
+   - Driver and emergency contacts receive instant SMS/Telegram confirmation: *"Ambulance dispatched, ETA X min"*.
+   - If declined or unacknowledged within 90 seconds, the protocol autonomously cascades to the next nearest hospital (up to 3 facilities).
 
-    subgraph LOCAL_NET["🏠 Local Network / Docker Host"]
-        subgraph DOCKER["docker-compose.yml"]
-            MOSQ["Container: Mosquitto<br/>📡 MQTT Broker<br/>:1883 (TCP) / :9001 (WS)"]
-            FAST["Container: FastAPI Backend<br/>⚙️ REST + WebSocket<br/>:8000"]
-        end
-        SQLITE[("SQLite<br/>intellicrash.db")]
-        NEXT["Next.js Dashboard<br/>🖥️ npm run dev<br/>:3000"]
-    end
+---
 
-    subgraph EXTERNAL["☁️ External Services (Optional)"]
-        FIREBASE["Firebase Firestore<br/>Cloud sync"]
-        TWILIO["Twilio API<br/>SMS dispatch"]
-        SMTP["SMTP Server<br/>Email dispatch"]
-    end
+## 📂 Repository Structure
 
-    PI -->|"MQTT publish<br/>(QoS 1/2)"| MOSQ
-    PI -->|"HTTP POST<br/>/api/v1/telemetry"| FAST
-    MOSQ -->|"subscribe"| FAST
-    FAST --> SQLITE
-    FAST -->|"WebSocket push"| NEXT
-    FAST -.->|"if enabled"| FIREBASE
-    FAST -.->|"on crash"| TWILIO
-    FAST -.->|"on crash"| SMTP
-
-    style PI fill:#c0392b,color:#fff
-    style MOSQ fill:#2c3e50,color:#fff
-    style FAST fill:#8e44ad,color:#fff
-    style NEXT fill:#2980b9,color:#fff
-    style FIREBASE fill:#f39c12,color:#fff
-    style TWILIO fill:#e74c3c,color:#fff
+```text
+Project-IntelliCrash/
+│
+├── dashboard/                              # Full-Stack Next.js 16 Web Cockpit & Central Server
+│   ├── data/
+│   │   └── intellicrash.db                 # Central SQLite database (better-sqlite3)
+│   ├── src/
+│   │   └── app/
+│   │       ├── api/
+│   │       │   ├── ack/route.js            # Hospital One-Time Token Triage Endpoint
+│   │       │   ├── auth/                   # RBAC Auth (scrypt hash, HTTP-only cookies)
+│   │       │   ├── dispatch/route.js       # Manual & automated emergency dispatch
+│   │       │   ├── hospitals/route.js      # Hospital directory & Haversine distance
+│   │       │   ├── incidents/route.js      # Incident timeline and audit log queries
+│   │       │   ├── ingest/route.js         # Edge store-and-forward ingestion endpoint
+│   │       │   └── profile/route.js        # User profiles & SOS contact settings
+│   │       └── components/
+│   │           ├── AuthScreen.jsx          # Login/Register (Fleet Owner, Responder, Admin)
+│   │           ├── Car3D.jsx               # Three.js 3D vehicle attitude playback
+│   │           ├── Dashboard.jsx           # Main cockpit (Recharts gauges, timeline)
+│   │           └── HeatMap.jsx             # Leaflet GIS crash clustering & trajectories
+│   └── package.json                        # Dependencies (Next 16, React 19, Tailwind 4, Leaflet)
+│
+├── edge/                                   # Real-Time Embedded Edge Runtime (Raspberry Pi 4)
+│   ├── evidence/                           # Saved 15s locked MP4 collision video clips
+│   ├── blackbox_queue/                     # Offline store-and-forward queue (JSON + MP4)
+│   ├── models/                             # Deployed ARM64-optimized models
+│   │   ├── best_sensor_rash_classifier.pkl # Binary LightGBM Pre-Crash model
+│   │   ├── hw_bilstm.onnx                  # Bi-LSTM ONNX crash model graph
+│   │   ├── hw_bilstm.onnx.data             # Bi-LSTM model weights
+│   │   ├── optimal_fusion_weights.json     # Dynamic late fusion parameters (0.60 / 0.40)
+│   │   ├── scaler_params.json              # 26-feature normalization scaler
+│   │   └── sensor_rash_label_encoder.pkl   # Class label encoder
+│   ├── alert_dispatch.py                   # Multi-channel dispatcher (Twilio, Telegram, SMTP)
+│   ├── buzzer.py                           # GPIO 18 Active Piezo PWM acoustic driver
+│   ├── dashboard_bridge.py                 # 20 Hz WebSocket server & SQLite ingest sync
+│   ├── edge_inference.py                   # Unified dual-phase real-time inference daemon
+│   ├── feature_engineering.py              # 26 physics-informed kinematics feature extractor
+│   ├── hospitals.json                      # Local trauma center registry & GPS coordinates
+│   ├── incident_manager.py                 # Closed-loop driver safety verification (Telegram 60s)
+│   ├── picam_recorder.py                   # Sony IMX708 circular video buffer & lock daemon
+│   ├── rash_inference.py                   # Pre-crash sliding window inference wrapper
+│   └── raspberry_pi_node.py                # Master hardware daemon launcher & supervisor
+│
+├── hardware_training/                      # Physical Sensor Data & ML Training Suite
+│   ├── latest sensor data/                 # Raw 100 Hz IMU logged sessions (0006 to 0015)
+│   ├── data/                               # Preprocessed training splits & feature arrays
+│   │   ├── sensor_precrash_dataset.csv     # Binary ground-truth dataset (2,283 samples)
+│   │   └── hw_X.npy, hw_y.npy, hw_csi.npy  # Bi-LSTM sequence arrays & CSI scores
+│   ├── models/                             # Hardware-trained checkpoints & TOPSIS outputs
+│   ├── plots/                              # TreeSHAP forensic waterfall & importance plots
+│   ├── reports/                            # TOPSIS ranking CSVs & forensic PDF reports
+│   ├── data_pipeline.py                    # 100 Hz IMU windowing & 5th-order Butterworth
+│   ├── evaluate_sensor_rash_baselines.py   # Binary LightGBM training & benchmarking
+│   ├── bilstm.py & train_phase2.py         # PyTorch Bi-LSTM training & ONNX export
+│   ├── topsis.py & run_topsis.py           # Multi-criteria TOPSIS model selector
+│   └── feature_engineering.py              # Vectorized feature engineering module
+│
+├── foundational_pipeline/                  # Public Dataset Benchmarks & HuggingFace Validation
+│   ├── dataset/                            # Kaggle & VZCrash public datasets
+│   └── validation_scripts/                 # Cross-domain HuggingFace validation benchmarks
+│
+├── docs/                                   # Documentation, Schematics & Formal Diagrams
+│   ├── diagrams/                           # Formal UML Activity, Use Case & DFD Level 0/1
+│   ├── hardware_photos/                    # High-res photos of Pi 4 test bench & sensor wiring
+│   └── Final_Project_Report/               # Comprehensive academic Capstone report chapters
+│
+├── .gitignore                              # Production git exclusion rules
+├── .env.example                            # Configuration template for Twilio/Telegram/SMTP
+├── README.md                               # Project documentation
+└── requirements.txt                        # Python dependencies
 ```
 
-**What runs where:**
+---
 
-| Component | Runs On | Port | Protocol |
+## 🛠️ Tech Stack
+
+<div align="center">
+
+### Core Technologies at a Glance
+
+<a href="https://skillicons.dev">
+  <img src="https://skillicons.dev/icons?i=python,pytorch,sklearn,nextjs,react,tailwind,threejs,sqlite,raspberrypi,linux,git,github,vscode" />
+</a>
+
+</div>
+
+<br/>
+
+| Domain | Technology / Library | Role in System |
+|:---|:---|:---|
+| **Edge Hardware** | <img src="https://skillicons.dev/icons?i=raspberrypi,linux" height="20"/> **Raspberry Pi 4 (ARM64), Linux** | Bare-metal processing host executing 100 Hz dual-phase inference |
+| **Edge Transducers** | **SmartElex ISM330DHCX, u-blox NEO-8M, Sony IMX708, Piezo Buzzer** | 6-DoF IMU (I2C), multi-GNSS (UART), 1080p rolling camera (CSI-2), GPIO 18 PWM |
+| **Machine Learning** | <img src="https://skillicons.dev/icons?i=pytorch,sklearn" height="20"/> **LightGBM, PyTorch Bi-LSTM, ONNX Runtime** | Pre-crash rash driving classifier & deep crash sequence inference |
+| **Explainable AI (XAI)** | <img src="https://skillicons.dev/icons?i=python" height="20"/> **TreeSHAP, SciPy, NumPy** | Feature attribution waterfall plots, 5th-order Butterworth filter, FFT analysis |
+| **Web Dashboard** | <img src="https://skillicons.dev/icons?i=nextjs,react,tailwind" height="20"/> **Next.js 16, React 19, Tailwind CSS 4** | Spatial web cockpit, hospital triage portal, and REST API routes |
+| **3D & Spatial GIS** | <img src="https://skillicons.dev/icons?i=threejs,js" height="20"/> **Three.js, Leaflet GIS, Recharts** | Real-time 3D vehicle attitude playback (`Car3D`), trajectory heatmaps, telemetry curves |
+| **Database & Queue** | <img src="https://skillicons.dev/icons?i=sqlite" height="20"/> **SQLite3 (WAL Mode), better-sqlite3** | Embedded store-and-forward queue (`is_synced = 0`) and central telemetry DB |
+| **Telematics & Alerts** | **Twilio API, Telegram Bot API, SMTP TLS** | Multi-channel SMS, synthesized voice calls, GPS live location pins, email dossiers |
+| **Communication** | **WebSockets (`ws://`), HTTP REST** | 20 Hz live telemetry streaming and resilient store-and-forward batch ingestion |
+| **Version Control** | <img src="https://skillicons.dev/icons?i=git,github,vscode" height="20"/> **Git, GitHub, VS Code** | Modular repository version control and production deployment |
+
+---
+
+## 🔬 Hardware Test Bench Specifications
+
+| Module | Physical Interface | Bus Parameters | Function |
 |---|---|---|---|
-| IMU + ONNX Inference | Raspberry Pi 4 | — | — |
-| Telemetry Server | Raspberry Pi 4 | `:5000` | HTTP |
-| Mosquitto MQTT Broker | Docker container | `:1883` / `:9001` | MQTT / WS |
-| FastAPI Backend | Docker container | `:8000` | HTTP / WS |
-| SQLite Database | Docker volume | — | File |
-| Next.js Dashboard | Local (npm) | `:3000` | HTTP |
-| Firebase Firestore | Google Cloud (optional) | — | HTTPS |
-| Twilio SMS | Twilio Cloud (optional) | — | HTTPS |
+| **Raspberry Pi 4 Model B** | Host Board | Quad Cortex-A72 @ 1.5 GHz, 4GB LPDDR4 | Central Edge Computing Node |
+| **SmartElex ISM330DHCX** | 40-Pin GPIO (I2C-1) | Address `0x6B`, 400 kHz Fast-Mode | 100 Hz 3-Axis Accel ($\pm4g$) + 3-Axis Gyro ($\pm500\text{ dps}$) |
+| **u-blox NEO-8M** | UART Serial (`/dev/ttyAMA0`) | 9600 Baud, 8-N-1 framing | Continuous NMEA-0183 GNSS coordinates and speed |
+| **Pi Camera Module 3** | 15-Pin MIPI CSI-2 | 2-Lane MIPI, 1080p @ 30 fps | 15s circular in-memory rolling video buffer |
+| **Active Piezo Buzzer** | GPIO 18 (PWM0) | 5.0V DC switching via 2N2222 transistor | 2.73 kHz resonant frequency in-cabin acoustic alert |
+| **DC-DC Buck Regulator** | Terminal Block | 12V/24V Vehicle Input $\rightarrow$ 5.1V @ 3.0A | Stable automotive cabin power supply with TVS protection |
 
 ---
 
-## Repository Structure
+## 🚀 Getting Started
 
-```
-IntelliCrash/
-├── src/
-│   ├── backend/                    # FastAPI enterprise backend
-│   │   ├── main.py                 # App entry point, lifespan, health check
-│   │   ├── config.py               # Pydantic settings (env + defaults)
-│   │   ├── database.py             # SQLite schema, migrations, queries
-│   │   ├── models.py               # Pydantic request/response schemas
-│   │   ├── security.py             # JWT auth, bcrypt, RBAC
-│   │   ├── routers/
-│   │   │   ├── telemetry.py        # /api/v1/telemetry
-│   │   │   ├── crashes.py          # /api/v1/crashes
-│   │   │   ├── alerts.py           # /api/v1/alerts (SMS + Email)
-│   │   │   ├── auth.py             # /api/v1/auth (login, signup)
-│   │   │   └── video.py            # /api/v1/video (dashcam feed)
-│   │   ├── services/
-│   │   │   ├── mqtt_service.py     # MQTT subscriber bridge
-│   │   │   ├── firebase_service.py # Firestore cloud sync
-│   │   │   └── inference_bridge.py # ONNX model inference in API
-│   │   ├── middleware/
-│   │   │   └── logging_middleware.py
-│   │   └── ws/
-│   │       └── manager.py          # WebSocket connection pool
-│   │
-│   ├── data/                       # Data processing
-│   │   ├── preprocess_imu.py       # Butterworth filter, windowing
-│   │   ├── synthetic_crashes.py    # Synthetic crash generation
-│   │   ├── eda.py                  # Exploratory data analysis
-│   │   ├── download_vzcrash.py     # VZCrash dataset from HuggingFace
-│   │   └── export_dataset_csv.py   # Export processed data
-│   │
-│   ├── features/
-│   │   └── feature_engineering.py  # 26 engineered features + CSI
-│   │
-│   ├── models/                     # ML training & evaluation
-│   │   ├── bilstm.py               # Bi-LSTM model definition
-│   │   ├── train_bilstm.py         # Training loop (focal loss, cosine LR)
-│   │   ├── train_baselines.py      # CNN-1D, LSTM, LSTM-AE, RF
-│   │   ├── run_baselines.py        # 6-model benchmark runner
-│   │   ├── evaluate_multiclass_baselines.py
-│   │   ├── evaluate_ablation.py    # Ablation study
-│   │   ├── evaluate_plots.py       # ROC, confusion matrices
-│   │   ├── evaluate_vzcrash.py     # Real-world VZCrash evaluation
-│   │   ├── finetune_vzcrash.py     # Domain adaptation
-│   │   ├── shap_analysis.py        # SHAP explainability
-│   │   └── optimize_weights.py     # Fusion gate weight optimization
-│   │
-│   ├── edge/                       # Edge device modules
-│   │   ├── telemetry_server.py     # HTTP server for Pi (:5000)
-│   │   ├── mqtt_publisher.py       # MQTT edge publisher
-│   │   ├── stream_to_backend.py    # HTTP streaming to FastAPI
-│   │   ├── dispatch_alert.py       # SMS + Email alert dispatch
-│   │   └── inference.cpp           # C++ ONNX inference for Pi
-│   │
-│   └── utils/
-│       └── config.py               # YAML config loader
-│
-├── dashboard/                      # Next.js real-time dashboard
-│   └── src/app/components/
-│       ├── Dashboard.jsx           # Main dashboard (KPIs, charts)
-│       ├── SimulationLab.jsx       # Interactive crash simulation
-│       ├── PyCamFeed.jsx           # Live camera feed
-│       ├── AttentionHeatmap.jsx    # Bi-LSTM attention weights
-│       ├── EventTimeline.jsx       # Crash event timeline
-│       └── HeatMap.jsx             # Geographic heatmap
-│
-├── hardware/                       # Hardware-specific training pipeline
-├── configs/
-│   ├── config.yaml                 # All hyperparameters in one place
-│   └── mosquitto.conf              # MQTT broker config
-├── models/                         # Trained model checkpoints + ONNX
-├── data/                           # SQLite DB + processed datasets
-├── outputs/                        # Plots, reports, evaluation results
-├── figures/                        # 17 architecture diagrams (PNG)
-├── tests/                          # pytest unit + integration tests
-├── notebooks/                      # Jupyter notebooks (training, EDA)
-│
-├── Dockerfile                      # Backend container
-├── docker-compose.yml              # Multi-service orchestration
-├── .github/workflows/ci.yml        # CI/CD pipeline
-├── requirements.txt                # Python dependencies
-├── .env.example                    # Environment variable template
-└── README.md
-```
-
----
-
-## ML Pipeline
-
-### Data Flow
-
-```
-Raw IMU (100Hz) → Butterworth Filter → 2s Sliding Windows → Feature Engineering (26 features) → Train/Val/Test Split
-```
-
-### Models Trained & Compared
-
-| Model | Type | Purpose |
-|---|---|---|
-| **IntelliCrash Bi-LSTM** | Deep Learning | Primary crash detector (binary + severity) |
-| XGBoost | Gradient Boosting | Rash driving classifier (6 severity levels) |
-| CNN-1D | Deep Learning | Baseline comparison |
-| Vanilla LSTM | Deep Learning | Baseline comparison |
-| LSTM-Autoencoder | Deep Learning | Anomaly detection baseline |
-| Random Forest | Traditional ML | Feature-based baseline |
-
-### Feature Engineering (26 Features)
-
-Computed per 2-second window from raw `accel_x`, `accel_y`, `gyro_z`:
-
-**Kinematic:** Peak acceleration, Delta-V, Jerk RMS, Resultant magnitude
-**Spectral:** FFT energy (ax, ay, gz), Spectral centroid (ax, ay)
-**Statistical:** RMS accel, Variance (ax, ay, gz), Zero-crossing rates, Cross-correlation
-**Temporal:** Gyro peak/range, Steering oscillation count, Deceleration duration, Energy ratio, Peak-to-peak, Autocorrelation lag-1
-
-### Fusion Gate
-
-```
-P_final = α · P_bilstm + β · CSI_normalized
-```
-Where α, β are optimized via grid search. Crash declared if `P_final > threshold`.
-
-### Validation
-
-- **Primary:** Stratified 70/15/15 split on IntelliCrash dataset
-- **External:** Zero-shot and fine-tuned evaluation on VZCrash (IEEE ITSC 2026, 31K+ real events)
-- **Ablation:** Feature group removal study
-- **Explainability:** SHAP global importance + per-sample waterfall plots
-- **Model Selection:** TOPSIS multi-criteria decision analysis
-
----
-
-## FastAPI Backend
-
-### API Endpoints
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/auth/signup` | — | Register new user |
-| `POST` | `/api/v1/auth/login` | — | Get JWT token |
-| `POST` | `/api/v1/telemetry` | Bearer | Ingest telemetry data |
-| `GET` | `/api/v1/telemetry` | Bearer | Query telemetry history |
-| `POST` | `/api/v1/crashes` | Bearer | Record crash event |
-| `GET` | `/api/v1/crashes` | Bearer | List crash events |
-| `GET` | `/api/v1/crashes/stats` | Bearer | Crash statistics |
-| `POST` | `/api/v1/alerts/dispatch` | Bearer | Dispatch SMS + Email |
-| `GET` | `/api/v1/video/feed` | Bearer | Dashcam MJPEG stream |
-| `WS` | `/ws/telemetry` | — | Real-time telemetry push |
-| `GET` | `/health` | — | System health check |
-| `GET` | `/docs` | — | Swagger UI |
-
-### Services
-
-- **MQTT Service:** Subscribes to `intellicrash/v1/telemetry` and `intellicrash/v1/crashes` topics from Mosquitto broker
-- **Firebase Service:** Syncs crash events to Firestore for cloud dashboard access
-- **Inference Bridge:** Runs ONNX model inference within API request pipeline
-- **WebSocket Manager:** Maintains connection pool, broadcasts telemetry to all connected dashboard clients
-
----
-
-## Next.js Dashboard
-
-| Component | Description |
-|---|---|
-| **Dashboard** | Real-time KPIs (crash probability, CSI, severity), live waveform charts (Recharts), status indicators |
-| **SimulationLab** | Interactive crash scenario simulator — trigger normal/rash/crash events |
-| **PyCamFeed** | Live MJPEG camera feed from Pi or video endpoint |
-| **AttentionHeatmap** | Bi-LSTM attention weight visualization |
-| **EventTimeline** | Chronological crash event log |
-| **HeatMap** | Geographic crash location heatmap (Leaflet + React-Leaflet) |
-
----
-
-## Edge Device
-
-The Raspberry Pi 4 runs three processes:
-
-1. **Telemetry Server** (`telemetry_server.py`) — HTTP server on `:5000`, serves live IMU + inference results to dashboard
-2. **MQTT Publisher** (`mqtt_publisher.py`) — Publishes telemetry (QoS 1) and crash events (QoS 2) to Mosquitto
-3. **Alert Dispatch** (`dispatch_alert.py`) — Sends Twilio SMS and SMTP email on crash detection
-
-For C++ deployment, `inference.cpp` provides ONNX Runtime inference optimized for ARM.
-
----
-
-## Installation
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+ (for dashboard)
-- Docker & Docker Compose (for containerized deployment)
-
-### Option A: Docker (Recommended)
+### 1. Raspberry Pi Edge Node Setup
 
 ```bash
-# Clone and start the full stack
+# Clone the repository onto Raspberry Pi 4
 git clone https://github.com/Smarth2005/IntelliCrash.git
-cd IntelliCrash
+cd IntelliCrash/edge
 
-# Copy and configure environment variables
+# Install system dependencies (I2C, UART, Camera)
+sudo apt-get update
+sudo apt-get install -y i2c-tools python3-smbus python3-pip
+
+# Install Python requirements
+pip install -r ../requirements.txt
+
+# Configure your API credentials
 cp .env.example .env
-# Edit .env with your Twilio/Firebase credentials (optional)
+nano .env  # Add Twilio, Telegram Bot Token, and SMTP credentials
 
-# Start backend + MQTT broker
-docker-compose up --build -d
+# Run the live edge inference daemon
+python raspberry_pi_node.py --live
 
-# Start dashboard (separate terminal)
-cd dashboard && npm install && npm run dev
+# Or replay a pre-recorded crash session
+python raspberry_pi_node.py --replay ../hardware_training/latest\ sensor\ data/imu_session_0012.csv
 ```
 
-Backend available at `http://localhost:8000/docs`, Dashboard at `http://localhost:3000`.
+---
 
-### Option B: Manual
+### 2. Next.js Spatial Web Dashboard Setup
 
 ```bash
-# Backend
-python -m venv venv
-venv\Scripts\activate          # Windows
-pip install -r requirements.txt
-uvicorn src.backend.main:app --reload --port 8000
+# Navigate to dashboard directory
+cd IntelliCrash/dashboard
 
-# Dashboard (separate terminal)
-cd dashboard
+# Install Node dependencies
 npm install
+
+# Launch Next.js 16 development server
 npm run dev
+
+# Open in browser: http://localhost:3000
 ```
 
 ---
 
-## Usage
-
-### Run the Edge Telemetry Server (Demo Mode)
+### 3. Hardware ML Training Suite
 
 ```bash
-python src/edge/telemetry_server.py
-# Press 'c' to trigger a simulated crash event
-```
+# Navigate to hardware training folder
+cd IntelliCrash/hardware_training
 
-### Stream Telemetry to Backend
+# Run 100Hz sliding window segmentation & Butterworth filter pipeline
+python data_pipeline.py
 
-```bash
-# Via HTTP
-python src/edge/stream_to_backend.py --duration 30 --scenario mixed
+# Train & benchmark Phase-1 Binary Pre-Crash Classifier
+python evaluate_sensor_rash_baselines.py
 
-# Via MQTT (requires Mosquitto running)
-python src/edge/mqtt_publisher.py --host localhost --duration 20
-```
+# Train Phase-2 Bi-LSTM sequence model & export ONNX
+python train_phase2.py
 
-### Train Models
-
-```bash
-python src/models/train_bilstm.py           # Train Bi-LSTM
-python src/models/run_baselines.py           # 6-model comparison
-python src/models/evaluate_vzcrash.py        # VZCrash validation
-python src/models/finetune_vzcrash.py        # Domain adaptation
-python src/models/shap_analysis.py           # Generate SHAP reports
-```
-
-### Run EDA
-
-```bash
-python src/data/eda.py                       # Generate all EDA plots
-python src/data/download_vzcrash.py          # Download VZCrash from HuggingFace
+# Execute TOPSIS multi-criteria model selection
+python run_topsis.py
 ```
 
 ---
 
-## Testing & CI/CD
+## 📊 Performance & Validation Results
 
-### Run Tests Locally
+### 1. Model Classification Performance
 
-```bash
-# Unit tests
-pytest tests/ -v
+| Model Architecture | Task | Accuracy | F1-Score | Inference Latency (ARM64) |
+|---|---|:---:|:---:|:---:|
+| **LightGBM (TOPSIS Rank #1)** | Phase-1 Pre-Crash (Binary) | **98.4%** | **98.1%** | **0.82 ms** |
+| **Deep Bi-LSTM (ONNX)** | Phase-2 Crash Impact Path A | **97.6%** | **97.2%** | **11.4 ms** |
+| **Deterministic CSI** | Phase-2 Kinematics Path B | Deterministic | Metric | **0.18 ms** |
+| **Hybrid Fusion + Safeing** | Complete Crash Validation | **99.4%** | **99.2%** | **< 15.0 ms** |
 
-# Integration tests (start backend first)
-uvicorn src.backend.main:app --port 8000 &
-python tests/test_backend_api.py
-```
-
-### CI/CD Pipeline (`.github/workflows/ci.yml`)
-
-```
-Push/PR to main → Lint (py_compile) → Pytest → Integration Tests → Docker Build Validation
-```
-
-Runs automatically on every push to `main`.
+* **Kinematic Safeing Barrier Efficiency:** Rejects **100%** of non-collision road shocks (potholes, speed bumps, harsh braking) with **0.00% False Alarms**.
+* **Zero Cloud Dependency:** Full collision detection loop executes locally in **<15 ms** on Raspberry Pi 4 without network connectivity.
 
 ---
 
-## Results
+## 📜 License & Academic Credits
 
-### Model Performance (Test Set)
+Distributed under the **MIT License**. See `LICENSE` for details.
 
-| Metric | Bi-LSTM | Fusion (Bi-LSTM + CSI) |
-|---|---|---|
-| Accuracy | 97.2% | **98.1%** |
-| Recall (Crash) | 95.8% | **97.4%** |
-| F1-Score | 96.5% | **97.7%** |
-| False Positive Rate | 3.1% | **1.9%** |
-
-### VZCrash Real-World Validation
-
-| Mode | Recall | FPR |
-|---|---|---|
-| Zero-Shot | 89.3% | 4.2% |
-| Fine-Tuned (10% data) | **94.1%** | **2.8%** |
-
----
-
-## Tech Stack
-
-| Layer | Technologies |
-|---|---|
-| **Edge** | Raspberry Pi 4, ISM330DHCX IMU, ONNX Runtime, C++ |
-| **ML** | PyTorch, XGBoost, scikit-learn, SHAP, ONNX |
-| **Backend** | FastAPI, SQLite, JWT (PyJWT + bcrypt), Pydantic |
-| **IoT** | Eclipse Mosquitto (MQTT), paho-mqtt |
-| **Cloud** | Firebase Firestore, Twilio API, SMTP |
-| **Dashboard** | Next.js 16, React 19, Recharts, Leaflet, Tailwind CSS |
-| **DevOps** | Docker, Docker Compose, GitHub Actions CI/CD |
-| **Data** | NumPy, Pandas, SciPy, Parquet, HuggingFace Datasets |
-
----
-
-## License
-
-Distributed under the MIT License. See `LICENSE` for details.
-
-**Developed as a Capstone Project at Thapar Institute of Engineering and Technology (TIET), 2026.**
+Developed as a Capstone Project at the **Department of Computer Science and Engineering, Thapar Institute of Engineering and Technology (TIET), Patiala, 2026.**

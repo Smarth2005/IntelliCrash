@@ -1,65 +1,40 @@
-# IntelliCrash - Python Dependencies
-# Part A: ML Pipeline
+# ==============================================================================
+# IntelliCrash — Production Python Dependencies
+# ==============================================================================
 
-# Core
-numpy>=1.26.0
-pandas>=2.1.0
-scipy>=1.11.0
+# ── Part 1: Real-Time Edge Runtime (Raspberry Pi 4 / Embedded Node) ───────────
+# Core Mathematics & Signal Processing
+numpy>=1.24.0
+scipy>=1.10.0              # 5th-order Butterworth low-pass filter & FFT analysis
 
-# ML / Deep Learning
-torch>=2.1.0
-scikit-learn>=1.3.0
-xgboost>=2.0.0
-lightgbm>=4.0.0
-catboost>=1.2.0
-onnx>=1.15.0
-onnxruntime>=1.16.0
-onnxscript
+# Edge Model Inference Execution
+onnxruntime>=1.16.0        # Optimized ARM64 execution provider for Bi-LSTM ONNX model
+joblib>=1.3.0              # Fast loading of LightGBM binary pre-crash model & encoders
 
-# Visualization
-matplotlib>=3.8.0
-seaborn>=0.13.0
+# Physical Hardware Peripherals (I2C, UART, GPIO)
+smbus2>=0.4.3              # I2C bus communication for SmartElex ISM330DHCX 6-DoF IMU
+pyserial>=3.5              # UART serial communication for u-blox NEO-8M GNSS module
 
-# Explainability
-shap>=0.43.0
+# Real-Time Telematics & Dashboard Communication
+websockets>=12.0           # 20 Hz WebSocket live telemetry server (port :8765)
+requests>=2.31.0           # HTTP REST store-and-forward sync (POST /api/ingest) & Telegram Bot API
 
-# Data utilities
-pyarrow>=14.0.0
-tqdm>=4.66.0
+# Autonomous Multi-Channel Alerting & Secrets
+twilio>=8.0.0              # Emergency SMS notifications & automated voice synthesizer calls
+python-dotenv>=1.0.0       # Secure environment variables loading (.env)
 
-# Config
-pyyaml>=6.0
+# ── Part 2: Hardware ML Training & Prototyping Suite ──────────────────────────
+# Deep Learning & Gradient Boosting
+torch>=2.1.0               # PyTorch for Bi-LSTM sequence model training
+lightgbm>=4.0.0            # LightGBM for binary pre-crash driving behavior classifier
+scikit-learn>=1.3.0        # Metrics, train/test split, scaler, confusion matrices
+onnx>=1.15.0               # PyTorch to ONNX model export & graph validation
 
-# PDF generation (optional, for docs)
-fpdf2>=2.7.0
+# Data Engineering & Manipulation
+pandas>=2.1.0              # Sensor session CSV parsing & dataset formatting
+tqdm>=4.66.0               # Progress visualization during batch feature extraction
 
-# Emergency Alerts
-twilio>=8.0.0
-
-# ── Part B: Backend (FastAPI) ──────────────────────────────
-# Web Framework
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-websockets>=12.0
-
-# Data Validation & Settings
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-
-# Cloud (Firebase)
-firebase-admin>=6.2.0
-
-# Testing
-pytest>=7.4.0
-httpx>=0.25.0
-
-# ── Part C: IoT Messaging, Security & DevOps (Tier 2) ────────
-# IoT Messaging (MQTT)
-paho-mqtt>=2.0.0
-
-# Authentication & Security
-pyjwt>=2.8.0
-passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.0
-python-multipart>=0.0.9
-
+# Explainable AI (XAI) & Visualizations
+shap>=0.43.0               # TreeSHAP forensic feature attribution & waterfall plots
+matplotlib>=3.8.0          # ROC curves, confusion matrices, and sensor waveform plots
+seaborn>=0.13.0            # Correlation heatmaps and feature distributions
