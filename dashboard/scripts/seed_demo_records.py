@@ -18,7 +18,7 @@ DB = ROOT / "data" / "intellicrash.db"
 DDL = """
 CREATE TABLE IF NOT EXISTS driving_sessions (session_id TEXT PRIMARY KEY, vehicle_id TEXT NOT NULL, source TEXT, start_time TEXT, end_time TEXT);
 CREATE TABLE IF NOT EXISTS telemetry_log (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL REFERENCES driving_sessions(session_id) ON DELETE CASCADE, edge_id INTEGER NOT NULL, ts TEXT, ax REAL, ay REAL, az REAL, gz REAL, speed REAL, latitude REAL, longitude REAL, p_bilstm REAL, csi REAL, p_final REAL, driving_class TEXT, UNIQUE (session_id, edge_id));
-CREATE TABLE IF NOT EXISTS crash_events (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL REFERENCES driving_sessions(session_id) ON DELETE CASCADE, edge_id INTEGER NOT NULL, vehicle_id TEXT, ts TEXT, latitude REAL, longitude REAL, peak_accel REAL, ml_prob REAL, csi_score REAL, fused_score REAL, severity TEXT, video_clip_path TEXT, is_synced INTEGER NOT NULL DEFAULT 1, UNIQUE (session_id, edge_id));
+CREATE TABLE IF NOT EXISTS crash_events (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL REFERENCES driving_sessions(session_id) ON DELETE CASCADE, edge_id INTEGER NOT NULL, vehicle_id TEXT, ts TEXT, latitude REAL, longitude REAL, peak_accel REAL, ml_prob REAL, csi_score REAL, fused_score REAL, severity TEXT, video_clip_path TEXT, location_source TEXT, is_synced INTEGER NOT NULL DEFAULT 1, UNIQUE (session_id, edge_id));
 CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, crash_event_id INTEGER NOT NULL REFERENCES crash_events(id) ON DELETE CASCADE, edge_id INTEGER NOT NULL, channel TEXT, status TEXT, dispatched_at TEXT, error_msg TEXT, UNIQUE (crash_event_id, edge_id));
 """
 VEHICLE = "PB-11-AB-2027"
@@ -62,8 +62,8 @@ def main():
             hit = max(range(n), key=lambda j: (clip["samples"][j]["ax"]**2 + clip["samples"][j]["ay"]**2 + clip["samples"][j]["az"]**2))
             imp_ts = (start + timedelta(seconds=hit / 25)).isoformat(timespec="seconds")
             pf = max(s["pf"] for s in clip["samples"]); csi = max(s["csi"] for s in clip["samples"]); pb = max(s["pb"] for s in clip["samples"])
-            cur = db.execute("INSERT INTO crash_events (session_id,edge_id,vehicle_id,ts,latitude,longitude,peak_accel,ml_prob,csi_score,fused_score,severity,video_clip_path,is_synced) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)",
-                             (sid, hit, VEHICLE, imp_ts, cfg["lat"], cfg["lon"], clip["peak_m_s2"], pb, csi, pf, "FATAL", "crash_clip_session0006.mp4"))
+            cur = db.execute("INSERT INTO crash_events (session_id,edge_id,vehicle_id,ts,latitude,longitude,peak_accel,ml_prob,csi_score,fused_score,severity,video_clip_path,location_source,is_synced) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+                             (sid, hit, VEHICLE, imp_ts, cfg["lat"], cfg["lon"], clip["peak_m_s2"], pb, csi, pf, "FATAL", "crash_clip_session0006.mp4", "DEMO"))
             cid = cur.lastrowid
             for k, ch in enumerate(("Telegram", "Email"), start=1):
                 db.execute("INSERT INTO alerts (crash_event_id,edge_id,channel,status,dispatched_at,error_msg) VALUES (?,?,?,?,?,NULL)", (cid, k, ch, "DISPATCHED", imp_ts))

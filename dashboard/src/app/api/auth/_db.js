@@ -217,7 +217,7 @@ db.exec(`
     edge_id         INTEGER NOT NULL,
     vehicle_id      TEXT, ts TEXT, latitude REAL, longitude REAL,
     peak_accel REAL, ml_prob REAL, csi_score REAL, fused_score REAL, severity TEXT,
-    video_clip_path TEXT,
+    video_clip_path TEXT, location_source TEXT,
     is_synced       INTEGER NOT NULL DEFAULT 1,
     UNIQUE (session_id, edge_id)
   );
@@ -259,13 +259,13 @@ export function ingestBatch(body) {
       ack.telemetry.push(num(t.edge_id));
     }
     const insCrash = db.prepare(
-      `INSERT OR IGNORE INTO crash_events (session_id, edge_id, vehicle_id, ts, latitude, longitude, peak_accel, ml_prob, csi_score, fused_score, severity, video_clip_path)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT OR IGNORE INTO crash_events (session_id, edge_id, vehicle_id, ts, latitude, longitude, peak_accel, ml_prob, csi_score, fused_score, severity, video_clip_path, location_source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     for (const c of list(body?.crashes, 100)) {
       if (!c?.session_id || !hasSession.get(txt(c.session_id, 64)) || num(c.edge_id) === null) continue;
       insCrash.run(txt(c.session_id, 64), num(c.edge_id), txt(c.vehicle_id, 64), txt(c.ts, 32), num(c.latitude), num(c.longitude),
-        num(c.peak_accel), num(c.ml_prob), num(c.csi_score), num(c.fused_score), txt(c.severity, 16), txt(c.video_clip_path, 300));
+        num(c.peak_accel), num(c.ml_prob), num(c.csi_score), num(c.fused_score), txt(c.severity, 16), txt(c.video_clip_path, 300), txt(c.location_source, 12));
       ack.crashes.push(num(c.edge_id));
     }
     const findCrash = db.prepare("SELECT id FROM crash_events WHERE session_id = ? AND edge_id = ?");
@@ -304,7 +304,8 @@ export function listIncidentsAndAlerts() {
       csi_score: c.csi_score ?? 0,
       crash_probability: c.fused_score ?? 0,
       gps_coords: has ? [c.latitude, c.longitude] : null,
-      location_name: has ? `GPS ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}` : "GPS fix not available",
+      location_source: c.location_source || (has ? "GPS" : "NONE"),
+      location_name: has ? `${c.location_source === "DEMO" ? "Demo position" : "GPS"} ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}` : "GPS fix not available",
       evidence_video: c.video_clip_path ? String(c.video_clip_path).replaceAll("\\", "/").split("/").pop() : "no_clip_recorded",
       status: "LOGGED",
       delta_v_kmh: null,
@@ -358,6 +359,7 @@ db.exec(`
 `);
 
 // Databases created before GPS was added to telemetry_log get the two columns added in place (no data lost).
+if (!db.prepare("PRAGMA table_info(crash_events)").all().some((c) => c.name === "location_source")) db.exec("ALTER TABLE crash_events ADD COLUMN location_source TEXT");
 for (const col of ["latitude", "longitude"]) {
   if (!db.prepare("PRAGMA table_info(telemetry_log)").all().some((c) => c.name === col)) db.exec(`ALTER TABLE telemetry_log ADD COLUMN ${col} REAL`);
 }

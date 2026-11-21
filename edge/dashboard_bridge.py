@@ -31,7 +31,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS driving_sessions (
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS crash_events (
   vehicle_id TEXT, ts TEXT,
   latitude REAL, longitude REAL,
   peak_accel REAL, ml_prob REAL, csi_score REAL, fused_score REAL, severity TEXT,
-  video_clip_path TEXT, is_synced INTEGER NOT NULL DEFAULT 0
+  video_clip_path TEXT, location_source TEXT, is_synced INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS alerts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -235,13 +235,14 @@ class DashboardBridge:
         self._scores = {"p_bilstm": round(float(p_bilstm), 4), "csi": round(float(csi), 4), "p_final": round(float(p_final), 4)}
         self._status = status
 
-    def log_crash(self, severity, peak_accel, p_lstm, csi, p_final, gps, video_path):
+    def log_crash(self, severity, peak_accel, p_lstm, csi, p_final, gps, video_path, location_source=None):
         with self._lock:
             cur = self._db.execute(
-                "INSERT INTO crash_events(session_id, vehicle_id, ts, latitude, longitude, peak_accel, ml_prob, csi_score, fused_score, severity, video_clip_path) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO crash_events(session_id, vehicle_id, ts, latitude, longitude, peak_accel, ml_prob, csi_score, fused_score, severity, video_clip_path, location_source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (self.session_id, self.vehicle_id, datetime.now().isoformat(timespec="seconds"),
                  gps[0] if gps else None, gps[1] if gps else None,
-                 peak_accel, p_lstm, csi, p_final, severity, str(video_path) if video_path else None),
+                 peak_accel, p_lstm, csi, p_final, severity, str(video_path) if video_path else None,
+                 location_source or ("GPS" if gps else "NONE")),
             )
             self._db.commit()
             return cur.lastrowid
@@ -278,7 +279,7 @@ class DashboardBridge:
             tel = q("SELECT id, session_id, ts, ax, ay, az, gz, speed, latitude, longitude, p_bilstm, csi, p_final, driving_class "
                     "FROM telemetry_log WHERE is_synced=0 ORDER BY id LIMIT 300").fetchall()
             cr = q("SELECT id, session_id, vehicle_id, ts, latitude, longitude, peak_accel, ml_prob, csi_score, "
-                   "fused_score, severity, video_clip_path FROM crash_events WHERE is_synced=0 ORDER BY id LIMIT 50").fetchall()
+                   "fused_score, severity, video_clip_path, location_source FROM crash_events WHERE is_synced=0 ORDER BY id LIMIT 50").fetchall()
             batch_ids = {r[0] for r in cr}
             al = [r for r in q("SELECT a.id, a.crash_event_id, a.channel, a.status, a.dispatched_at, a.error_msg, "
                                "c.session_id, c.is_synced FROM alerts a JOIN crash_events c ON c.id=a.crash_event_id "
@@ -302,7 +303,7 @@ class DashboardBridge:
             "telemetry": rows(("edge_id", "session_id", "ts", "ax", "ay", "az", "gz", "speed", "latitude", "longitude",
                                "p_bilstm", "csi", "p_final", "driving_class"), tel),
             "crashes": rows(("edge_id", "session_id", "vehicle_id", "ts", "latitude", "longitude", "peak_accel",
-                             "ml_prob", "csi_score", "fused_score", "severity", "video_clip_path"), cr),
+                             "ml_prob", "csi_score", "fused_score", "severity", "video_clip_path", "location_source"), cr),
             "alerts": rows(("edge_id", "crash_edge_id", "channel", "status", "dispatched_at", "error_msg",
                             "session_id"), [r[:7] for r in al]),
         }

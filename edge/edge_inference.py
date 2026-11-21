@@ -177,6 +177,7 @@ class NEO8MGPSReader:
         self.latest_coords = None  # no position until the receiver reports a real fix
         self.last_fix_t = 0.0
         self.has_fix = False
+        self.nmea_ok = False
         self.speed_kmh = 0.0
         self._running = True
 
@@ -205,18 +206,39 @@ class NEO8MGPSReader:
         ser = None
         for p in candidate_ports:
             try:
-                ser = serial.Serial(p, baudrate=self.baudrate, timeout=1)
-                print(f"{GREEN}[OK] u-blox NEO-8M GNSS connected on {p} ({self.baudrate} baud){RESET}")
-                break
+                cand = serial.Serial(p, baudrate=self.baudrate, timeout=1)
             except Exception:
                 continue
+            # a port that opens is not necessarily the GPS: wait up to 3 s for real NMEA text
+            seen = False
+            t_end = time.time() + 3.0
+            while time.time() < t_end and not seen:
+                try:
+                    if cand.readline().decode("ascii", errors="replace").startswith("$G"):
+                        seen = True
+                except Exception:
+                    break
+            if seen:
+                ser = cand
+                print(f"{GREEN}[OK] u-blox NEO-8M GNSS connected on {p} ({self.baudrate} baud, NMEA data received){RESET}")
+                break
+            cand.close()
+            print(f"{YELLOW}[GPS] {p} opened but no NMEA data within 3 s (check TX/RX wiring, baud rate, serial port setup).{RESET}")
 
         if not ser:
+            print(f"{YELLOW}[GPS] No working GPS serial port found. Crash locations will be empty unless --demo-location is set.{RESET}")
             return
 
+        t_start = time.time()
+        warned_nofix = False
         while self._running:
             try:
                 line = ser.readline().decode("ascii", errors="replace").strip()
+                if line.startswith("$G"):
+                    self.nmea_ok = True
+                if (not self.has_fix) and (not warned_nofix) and self.nmea_ok and time.time() - t_start > 20:
+                    warned_nofix = True
+                    print(f"{YELLOW}[GPS] Receiver is talking but has NO FIX yet: it needs a clear view of the sky (indoors it never locks).{RESET}")
                 if line.startswith(("$GNRMC", "$GPRMC")):
                     parts = line.split(",")
                     if len(parts) >= 7 and parts[2] == "A":
@@ -238,6 +260,8 @@ class NEO8MGPSReader:
                             self.speed_kmh = float(parts[7]) * 1.852  # knots -> km/h
                         except (IndexError, ValueError):
                             pass
+                        if not self.has_fix:
+                            print(f"{GREEN}[GPS] First fix acquired: {self.latest_coords[0]}, {self.latest_coords[1]}{RESET}")
                         self.has_fix = True
                         self.last_fix_t = time.time()
             except Exception:
@@ -254,6 +278,17 @@ class NEO8MGPSReader:
         return self.speed_kmh if self.get_coordinates(max_age) is not None else None
 
 
+def parse_demo_location():
+    """DEMO_LOCATION='lat,lon' (env, set by --demo-location). Used ONLY when there is no real GPS fix and always
+    stored/labelled as source=DEMO, never passed off as a GPS reading."""
+    import os
+    try:
+        a, b = os.environ.get("DEMO_LOCATION", "").split(",")
+        return (round(float(a), 5), round(float(b), 5))
+    except Exception:
+        return None
+
+
 def inference_loop(
     reader,
     onnx_session,
@@ -268,6 +303,7 @@ def inference_loop(
     alert_cooldown: float = 5.0,
     buzzer_cooldown: float = 3.0,
     bridge=None,
+    buzzer_on_crash: bool = True,
 ):
     models_dir = HARDWARE_DIR / "models"
     with open(models_dir / "scaler_params.json") as f:
@@ -421,6 +457,22 @@ def inference_loop(
                         # Real GNSS position at the moment of the crash (last fix within 60 s, since the impact
                         # may knock the antenna). None if the receiver never had a fix: no made-up location.
                         current_gps = gps_reader.get_coordinates(max_age=60.0) if gps_reader else None
+                        location_source = "GPS" if current_gps else "NONE"
+                        if current_gps is None:
+                            demo_loc = parse_demo_location()
+                            if demo_loc:
+                                current_gps, location_source = demo_loc, "DEMO"
+                        if location_source == "GPS":
+                            print(f"  {GREEN}[LOCATION] Real GPS fix saved: {current_gps[0]}, {current_gps[1]}{RESET}", flush=True)
+                        elif location_source == "DEMO":
+                            print(f"  {YELLOW}[LOCATION] No GPS fix -> saving the configured DEMO position {current_gps[0]}, {current_gps[1]} (marked DEMO){RESET}", flush=True)
+                        else:
+                            why = "GPS disabled or replay mode" if gps_reader is None else "GPS has no fix (needs open sky)"
+                            print(f"  {YELLOW}[LOCATION] No location available: {why}. Use --demo-location LAT,LON for indoor demos.{RESET}", flush=True)
+
+                        # In-cabin alarm while the driver is asked "Are you OK?"
+                        if buzzer is not None and buzzer_on_crash:
+                            buzzer.trigger_crash_alert()
 
                         # Capture video clip evidence via PiCam
                         video_clip = None
@@ -436,7 +488,7 @@ def inference_loop(
 
                         # Crash row first (so the incident can be linked to it), then the closed-loop flow runs in
                         # its own thread: driver "I'm OK" check -> hospital request -> acknowledgement.
-                        crash_id = bridge.log_crash(severity, peak_accel, p_lstm, csi_score, p_final, current_gps, video_clip) if bridge is not None else None
+                        crash_id = bridge.log_crash(severity, peak_accel, p_lstm, csi_score, p_final, current_gps, video_clip, location_source) if bridge is not None else None
                         alert_module.start_incident(
                             crash_id=crash_id,
                             severity=severity,
@@ -447,6 +499,7 @@ def inference_loop(
                             gps=current_gps,
                             video_path=video_clip,
                             bridge=bridge,
+                            location_source=location_source,
                         )
                 else:
                     status_note = ""

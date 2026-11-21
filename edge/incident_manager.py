@@ -221,12 +221,16 @@ class IncidentManager:
                             "Put it in .env as TELEGRAM_DRIVER_CHAT_ID (driver) or TELEGRAM_CHAT_ID (emergency contact).")
 
     # ── public entry ─────────────────────────────────────────────────────
-    def start(self, crash_id, severity, peak_accel, p_final, csi, p_lstm, gps, video_path, bridge=None):
-        pos, demo = (tuple(gps), False) if gps else (self.demo_loc, True)
+    def start(self, crash_id, severity, peak_accel, p_final, csi, p_lstm, gps, video_path, bridge=None, location_source=None):
+        # numpy floats (float32) are not JSON serialisable: convert everything to plain Python types
+        peak_accel, p_final, csi = float(peak_accel), float(p_final), float(csi)
+        gps = (float(gps[0]), float(gps[1])) if gps else None
+        pos, demo = (tuple(gps), location_source == "DEMO") if gps else (self.demo_loc, True)
         inc = {"key": f"{getattr(bridge, 'session_id', 'local')}-{crash_id}", "session": getattr(bridge, "session_id", "local"),
                "crash_id": crash_id if crash_id is not None else int(time.time()), "bridge": bridge, "severity": severity, "peak": peak_accel,
                "p_final": p_final, "csi": csi, "video": video_path, "pos": pos, "demo_pos": demo and pos is not None,
-               "gps": gps, "events": [], "t0": _now(), "outcome": None, "crash_row": crash_id}
+               "gps": gps, "events": [], "t0": _now(), "outcome": None, "crash_row": crash_id,
+               "location_source": location_source}
         threading.Thread(target=self._run, args=(inc,), daemon=True).start()
         return inc["key"]
 
@@ -248,8 +252,11 @@ class IncidentManager:
         try:
             self._event(inc, "system", "CRASH_DETECTED", f"{inc['severity']} · peak {inc['peak']:.1f} m/s² · fused {inc['p_final']:.2f} · CSI {inc['csi']:.2f}")
             self.d.save_to_local_blackbox({"severity": inc["severity"], "p_final": inc["p_final"], "csi": inc["csi"], "peak": inc["peak"],
-                                           "gps": inc["gps"], "video": str(inc["video"]) if inc["video"] else None, "incident": inc["key"]})
+                                           "gps": inc["gps"], "video": str(inc["video"]) if inc["video"] else None, "incident": inc["key"],
+                                           "location_source": inc.get("location_source")})
             answer = self._ask_driver(inc)
+            if answer == "help": inc["reason"] = "driver asked for help"
+            elif answer is None and not inc.get("reason"): inc["reason"] = f"driver did not respond within {self.driver_wait} s"
             if answer == "ok":
                 self._event(inc, "driver", "DRIVER_OK", "driver confirmed safe; no hospital contacted")
                 inc["outcome"] = "DRIVER_OK"
@@ -274,9 +281,11 @@ class IncidentManager:
         """Returns 'ok', 'help' or None (no answer / prompt could not be delivered)."""
         if inc["severity"] in self.immediate:
             self._event(inc, "system", "IMMEDIATE_DISPATCH", f"{inc['severity']} skips the driver check")
+            inc["reason"] = "severe crash: driver check skipped"
             return None
         if not (self.token and self.driver_chat):
             self._event(inc, "system", "DRIVER_PROMPT_UNAVAILABLE", "no driver Telegram chat configured; escalating (fail-safe)")
+            inc["reason"] = "driver could not be asked (no prompt channel)"
             return None
         key = inc["key"]
         p = {"ev": threading.Event(), "answer": None}
@@ -289,6 +298,7 @@ class IncidentManager:
         self._log_alert(inc, "Telegram · driver prompt", mid is not None, "send failed")
         if mid is None:
             self._event(inc, "system", "DRIVER_PROMPT_FAILED", "Telegram delivery failed; escalating (fail-safe)")
+            inc["reason"] = "driver could not be reached (prompt not delivered)"
             return None
         self._event(inc, "system", "DRIVER_PROMPTED", f"Telegram prompt sent; waiting {self.driver_wait} s")
         if self.call_driver and self.d.twilio_enabled and self.driver_phone:
@@ -327,7 +337,7 @@ class IncidentManager:
             self._event(inc, "system", "HOSPITAL_REQUESTED", f"#{i + 1} {h['name']}{dist}" + ("" if ok else f" - e-mail FAILED: {err}"))
             if not contact_told:
                 contact_told = True
-                msg = (f"🚨 <b>CRASH - driver did not respond</b>\n{self._summary_html(inc)}\n\n"
+                msg = (f"🚨 <b>CRASH - {html.escape(inc.get('reason') or 'driver did not respond')}</b>\n{self._summary_html(inc)}\n\n"
                        f"🏥 Ambulance requested from <b>{html.escape(h['name'])}</b>{dist}. Waiting for their confirmation…")
                 m = self._send(self.contact_chat, msg)
                 self._log_alert(inc, "Telegram · emergency contact", m is not None, "send failed")
@@ -375,9 +385,28 @@ class IncidentManager:
         except Exception as e:
             print(f"{YELLOW}[SMS] {e}{RESET}")
 
+    def _prepare_video(self, inc):
+        """Wait (briefly) for the crash clip, which also holds the seconds AFTER the impact. Returns (path or None, note)."""
+        vp = inc.get("video")
+        if not vp:
+            return None, "no video clip was recorded"
+        wait_s = 5 if inc.get("skipped_check") else _env_int("VIDEO_WAIT_SECONDS", 25)
+        t_end = time.time() + wait_s
+        while not Path(str(vp)).exists() and time.time() < t_end:
+            time.sleep(1.0)
+        f = Path(str(vp))
+        if not f.exists():
+            return None, f"still being written; will be saved on the vehicle unit as {f.name}"
+        size = f.stat().st_size
+        if size < 18_000_000:      # e-mail limit is ~25 MB after base64 encoding
+            return f, f"attached to this e-mail ({size / 1e6:.1f} MB)"
+        return None, f"too large to attach ({size / 1e6:.0f} MB); saved on the vehicle unit as {f.name}"
+
     def _email_hospital(self, inc, h, tok, base):
         if not self.d.email_enabled:
             return False, "e-mail not configured"
+        video_file, video_note = self._prepare_video(inc)
+        print(f"  [INCIDENT {inc['key']}] video: {video_note}", flush=True)
         where, link = self._where(inc)
         acc = f"{base}/api/ack?token={tok}" if base else None
         btn = (f'<p style="text-align:center"><a href="{acc}" style="background:#16a34a;color:#fff;padding:13px 26px;border-radius:8px;'
@@ -388,14 +417,14 @@ class IncidentManager:
                 ("Severity", inc["severity"]), ("Peak acceleration", f"{inc['peak']:.1f} m/s²"),
                 ("Crash probability / CSI", f"{inc['p_final']:.0%} / {inc['csi']:.2f}"),
                 ("Location", where), ("Distance to your hospital", f"{h['distance_km']} km" if h["distance_km"] is not None else "n/a"),
-                ("Driver status", f"did not confirm safety within {self.driver_wait} s")]
+                ("Why you are asked", inc.get("reason") or f"driver did not respond within {self.driver_wait} s"), ("Video", video_note)]
         trs = "".join(f"<tr><th style='text-align:left;background:#f9fafb;padding:9px;border:1px solid #e5e7eb;width:40%'>{html.escape(a)}</th>"
                       f"<td style='padding:9px;border:1px solid #e5e7eb'>{html.escape(str(b))}</td></tr>" for a, b in rows)
         maps = f'<p style="text-align:center"><a href="{link}">📍 Open crash location in Google Maps</a></p>' if link else ""
         body = (f"<html><body style='font-family:Arial,sans-serif;background:#f3f4f6;padding:14px'><div style='max-width:600px;margin:auto;background:#fff;"
                 f"border:1px solid #e5e7eb;border-radius:12px;padding:22px'><span style='background:#fee2e2;color:#b91c1c;padding:4px 11px;border-radius:99px;"
                 f"font-weight:700;font-size:11px'>AMBULANCE REQUEST</span><h2>{html.escape(h['name'])}: please dispatch an ambulance</h2>"
-                f"<p>IntelliCrash detected a collision and the driver did not respond to the safety check.</p><table style='width:100%;border-collapse:collapse'>{trs}</table>"
+                f"<p>IntelliCrash detected a collision and the driver is not confirmed safe (see reason below).</p><table style='width:100%;border-collapse:collapse'>{trs}</table>"
                 f"{maps}{btn}<p style='font-size:12px;color:#6b7280'>Values are sensor readings from the vehicle unit. If this request is not answered, "
                 f"the next nearest hospital is contacted automatically.</p></div></body></html>")
         try:
@@ -404,12 +433,11 @@ class IncidentManager:
             msg["To"] = h["email"]
             msg["Subject"] = f"🚨 AMBULANCE REQUEST - {inc['severity']} crash near you ({self.vehicle_id})"
             msg.attach(MIMEText(body, "html"))
-            vp = inc["video"]
-            if vp and Path(str(vp)).exists() and Path(str(vp)).stat().st_size < 15_000_000:
+            if video_file is not None:
                 part = MIMEBase("video", "mp4")
-                part.set_payload(open(vp, "rb").read())
+                part.set_payload(open(video_file, "rb").read())
                 encoders.encode_base64(part)
-                part.add_header("Content-Disposition", f'attachment; filename="{Path(str(vp)).name}"')
+                part.add_header("Content-Disposition", f'attachment; filename="{video_file.name}"')
                 msg.attach(part)
             s = smtplib.SMTP(self.cfg["smtp_server"], self.cfg["smtp_port"], timeout=20)
             s.starttls()

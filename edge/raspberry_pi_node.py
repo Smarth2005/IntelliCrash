@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -91,6 +92,28 @@ def main():
         "--buzzer-pin", type=int, default=18, help="GPIO BCM Pin for active buzzer (default: 18)"
     )
     parser.add_argument(
+        "--buzzer-active-low", action="store_true", help="Buzzer module sounds when the pin is LOW (many 3-pin modules)"
+    )
+    parser.add_argument(
+        "--no-crash-beep", action="store_true", help="Do not sound the buzzer when a crash is confirmed (rash warning stays on)"
+    )
+    parser.add_argument(
+        "--gps-port", default=None, help="GPS serial port, e.g. /dev/serial0 or /dev/ttyAMA0 (default: auto-detect)"
+    )
+    parser.add_argument(
+        "--gps-baud", type=int, default=9600, help="GPS baud rate (NEO-8M default: 9600)"
+    )
+    parser.add_argument(
+        "--demo-location", default=None, metavar="LAT,LON",
+        help="Position saved (marked DEMO) when there is no GPS fix, e.g. 30.35487,76.36954 for indoor demos"
+    )
+    parser.add_argument(
+        "--video-pre-seconds", type=int, default=15, help="Seconds of video kept BEFORE the crash (default: 15)"
+    )
+    parser.add_argument(
+        "--video-post-seconds", type=int, default=15, help="Seconds of video recorded AFTER the crash (default: 15; clip = pre + post)"
+    )
+    parser.add_argument(
         "--threshold",
         type=float,
         default=None,
@@ -120,6 +143,10 @@ def main():
     print("      INTELLICRASH UNIFIED DUAL-PHASE EDGE NODE INITIALIZATION")
     print(f"{'=' * 70}{RESET}")
 
+    if args.demo_location:
+        os.environ["DEMO_LOCATION"] = args.demo_location
+        print(f"{YELLOW}[INFO] Demo location {args.demo_location} will be saved (marked DEMO) whenever there is no GPS fix.{RESET}")
+
     # 1. Phase-2 Bi-LSTM ONNX Crash Detection Engine
     print(f"{CYAN}[INIT 1/6] Loading Phase-2 Bi-LSTM Crash Model (ONNX Runtime)...{RESET}")
     model_path = HARDWARE_DIR / "models" / "hw_bilstm.onnx"
@@ -143,7 +170,7 @@ def main():
     if not args.no_buzzer:
         print(f"{CYAN}[INIT 3/6] Initializing Driver Warning Buzzer (BCM GPIO {args.buzzer_pin})...{RESET}")
         try:
-            buzzer = BuzzerController(pin=args.buzzer_pin, enabled=True)
+            buzzer = BuzzerController(pin=args.buzzer_pin, enabled=True, active_low=args.buzzer_active_low)
         except Exception as e:
             print(f"{YELLOW}          -> [WARN] Buzzer init skipped: {e}{RESET}")
     else:
@@ -154,7 +181,7 @@ def main():
     if not args.no_cam:
         print(f"{CYAN}[INIT 4/6] Initializing PiCam Rolling Crash Witness Recorder...{RESET}")
         try:
-            camera_recorder = PiCamCrashRecorder(buffer_seconds=15, fps=15, enabled=True)
+            camera_recorder = PiCamCrashRecorder(buffer_seconds=args.video_pre_seconds, post_seconds=args.video_post_seconds, fps=15, enabled=True)
         except Exception as e:
             print(f"{YELLOW}          -> [WARN] PiCam recorder init skipped: {e}{RESET}")
     else:
@@ -169,7 +196,7 @@ def main():
     gps_reader = None
     if args.live and not args.no_gps:
         try:
-            gps_reader = NEO8MGPSReader()
+            gps_reader = NEO8MGPSReader(port=args.gps_port, baudrate=args.gps_baud)
             print(f"{GREEN}          -> u-blox NEO-8M GNSS reader active.{RESET}")
         except Exception as e:
             print(f"{YELLOW}          -> [WARN] GPS reader skipped: {e}{RESET}")
@@ -206,6 +233,7 @@ def main():
         auto_calibrate=not args.no_calib,
         alert_cooldown=args.cooldown,
         bridge=bridge,
+        buzzer_on_crash=not args.no_crash_beep,
     )
 
 
